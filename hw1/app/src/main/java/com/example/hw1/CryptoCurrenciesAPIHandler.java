@@ -1,24 +1,22 @@
 package com.example.hw1;
 
-import android.os.AsyncTask;
-
 import com.squareup.moshi.JsonAdapter;
 import com.squareup.moshi.Moshi;
 
 import java.io.IOException;
-import java.util.Map;
+import java.util.Objects;
 
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 
-public class OkHttpHandler extends Thread {
+public class CryptoCurrenciesAPIHandler extends Thread {
     private final OkHttpClient client = new OkHttpClient();
     private final Moshi moshi = new Moshi.Builder().build();
     private final JsonAdapter<CryptoResponse> cryptoResponseJsonAdapter = moshi.adapter(CryptoResponse.class);
     private final String url;
 
-    public OkHttpHandler(String url) {
+    public CryptoCurrenciesAPIHandler(String url) {
         this.url = url;
     }
 
@@ -30,12 +28,18 @@ public class OkHttpHandler extends Thread {
                 .build();
 
         try {
+            System.out.println("Hey there 3: " + ItemsListFragment.isLoading.get() + " " + this.url);
             try (Response response = client.newCall(request).execute()) {
                 if (!response.isSuccessful()) throw new IOException("Unexpected code " + response);
 
-                CryptoResponse jsonResponse = cryptoResponseJsonAdapter.fromJson(response.body().source());
+                CryptoResponse jsonResponse = cryptoResponseJsonAdapter.fromJson(Objects.requireNonNull(response.body()).source());
 
+                assert jsonResponse != null;
                 UIHandler.showCryptoCurrencies(jsonResponse.data);
+
+                ItemsListFragment.isLoading.set(false);
+                ItemsListFragment.isEnded.set(jsonResponse.data.length == 20);
+                ItemsListFragment.pageNumber.set(ItemsListFragment.pageNumber.get() + 1);
             }
         } catch (Exception e1) {
             e1.printStackTrace();
@@ -46,7 +50,3 @@ public class OkHttpHandler extends Thread {
         CryptoCurrency[] data;
     }
 }
-
-
-
-

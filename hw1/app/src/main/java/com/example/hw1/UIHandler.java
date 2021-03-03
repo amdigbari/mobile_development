@@ -10,6 +10,6 @@ public class UIHandler {
     }
 
     private static void showCurrencies(CryptoCurrency[] cryptoCurrencies) {
-        MainActivity.setItemsListViewAdaptor(cryptoCurrencies);
+        ItemsListFragment.setItemsListViewAdaptor(cryptoCurrencies);
     }
 }

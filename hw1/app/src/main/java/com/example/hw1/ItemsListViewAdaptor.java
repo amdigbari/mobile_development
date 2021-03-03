@@ -1,6 +1,7 @@
 package com.example.hw1;
 
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -11,26 +12,30 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class ItemsListViewAdaptor extends RecyclerView.Adapter<ItemsListViewAdaptor.ViewHolder> {
-    private final List<CryptoCurrency> items;
+    private final ArrayList<CryptoCurrency> items = new ArrayList<CryptoCurrency>();
 
-    public ItemsListViewAdaptor(List<CryptoCurrency> items) {
-        this.items = items;
+
+    public ItemsListViewAdaptor() {
+
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
         // each data item is just a string in this case
         public TextView itemNameText;
         public TextView itemIdText;
+
         public ViewHolder(View itemView) {
             // Stores the itemView in a public final member variable that can be used
             // to access the context from any ViewHolder instance.
             super(itemView);
 
-            itemNameText = (TextView) itemView.findViewById(R.id.item_name);
-            itemIdText = (TextView) itemView.findViewById(R.id.item_id);
+            itemNameText = itemView.findViewById(R.id.item_name);
+            itemIdText = itemView.findViewById(R.id.item_id);
         }
     }
 
@@ -48,6 +53,7 @@ public class ItemsListViewAdaptor extends RecyclerView.Adapter<ItemsListViewAdap
     }
 
     // Involves populating data into the item through holder
+    @SuppressLint("SetTextI18n")
     @Override
     public void onBindViewHolder(ItemsListViewAdaptor.ViewHolder holder, int position) {
         // Get the data model based on position
@@ -65,5 +71,13 @@ public class ItemsListViewAdaptor extends RecyclerView.Adapter<ItemsListViewAdap
     @Override
     public int getItemCount() {
         return this.items.size();
+    }
+
+    public void addCryptoCurrencies(CryptoCurrency[] cryptoCurrencies) {
+        this.items.addAll(Arrays.asList(cryptoCurrencies));
+
+        this.notifyDataSetChanged();
+
+        System.out.println("Hey there 4: " + this.items.size());
     }
 }
