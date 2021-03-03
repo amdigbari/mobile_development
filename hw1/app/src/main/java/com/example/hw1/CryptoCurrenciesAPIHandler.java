@@ -28,7 +28,6 @@ public class CryptoCurrenciesAPIHandler extends Thread {
                 .build();
 
         try {
-            System.out.println("Hey there 3: " + ItemsListFragment.isLoading.get() + " " + this.url);
             try (Response response = client.newCall(request).execute()) {
                 if (!response.isSuccessful()) throw new IOException("Unexpected code " + response);
 
