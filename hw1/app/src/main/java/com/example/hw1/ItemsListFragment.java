@@ -43,7 +43,6 @@ public class ItemsListFragment extends Fragment {
 
         Button loadMore = view.findViewById(R.id.load_more);
         loadMore.setOnClickListener(v -> {
-            System.out.println("Hey there 2: " + isLoading.get() + " " + pageNumber.get());
             if (!isLoading.get()) {
                 isLoading.set(true);
                 getCryptoCurrencies(pageNumber.get());

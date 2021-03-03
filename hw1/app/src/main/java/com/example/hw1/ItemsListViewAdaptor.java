@@ -3,6 +3,7 @@ package com.example.hw1;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -12,9 +13,9 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
 public class ItemsListViewAdaptor extends RecyclerView.Adapter<ItemsListViewAdaptor.ViewHolder> {
     private final ArrayList<CryptoCurrency> items = new ArrayList<CryptoCurrency>();
@@ -25,17 +26,20 @@ public class ItemsListViewAdaptor extends RecyclerView.Adapter<ItemsListViewAdap
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
-        // each data item is just a string in this case
         public TextView itemNameText;
-        public TextView itemIdText;
+        public TextView itemPriceText;
+        public TextView itemDayDifference;
+        public TextView itemWeekDifference;
+        public TextView itemMonthDifference;
 
         public ViewHolder(View itemView) {
-            // Stores the itemView in a public final member variable that can be used
-            // to access the context from any ViewHolder instance.
             super(itemView);
 
             itemNameText = itemView.findViewById(R.id.item_name);
-            itemIdText = itemView.findViewById(R.id.item_id);
+            itemPriceText = itemView.findViewById(R.id.item_price);
+            itemDayDifference = itemView.findViewById(R.id.item_day_difference);
+            itemWeekDifference = itemView.findViewById(R.id.item_week_difference);
+            itemMonthDifference = itemView.findViewById(R.id.item_month_difference);
         }
     }
 
@@ -45,39 +49,42 @@ public class ItemsListViewAdaptor extends RecyclerView.Adapter<ItemsListViewAdap
         Context context = parent.getContext();
         LayoutInflater inflater = LayoutInflater.from(context);
 
-        // Inflate the custom layout
         View contactView = inflater.inflate(R.layout.item_card, parent, false);
 
-        // Return a new holder instance
         return new ViewHolder(contactView);
     }
 
-    // Involves populating data into the item through holder
     @SuppressLint("SetTextI18n")
     @Override
     public void onBindViewHolder(ItemsListViewAdaptor.ViewHolder holder, int position) {
-        // Get the data model based on position
         CryptoCurrency item = this.items.get(position);
 
-        // Set item views based on your views and data model
-        TextView itemNameView = holder.itemNameText;
-        itemNameView.setText(item.name);
-
-        TextView itemIdView = holder.itemIdText;
-        itemIdView.setText(item.id.toString());
+        holder.itemNameText.setText(item.symbol + " | " + item.name);
+        holder.itemPriceText.setText(item.quote.USD.price.toString() + "$");
+        showItemPercent(holder.itemDayDifference, item.quote.USD.percent_change_24h, "1d");
+        showItemPercent(holder.itemWeekDifference, item.quote.USD.percent_change_7d, "7d");
+        showItemPercent(holder.itemMonthDifference, item.quote.USD.percent_change_30d, "30d");
     }
 
-    // Returns the total count of items in the list
     @Override
     public int getItemCount() {
         return this.items.size();
+    }
+
+    @SuppressLint("SetTextI18n")
+    private void showItemPercent(TextView view, Float value, String prefix) {
+        DecimalFormat df = new DecimalFormat("0.00; 0.00");
+        view.setText(prefix + ": " + df.format(value) + "%");
+        if (value > 0f) {
+            view.setTextColor(Color.GREEN);
+        } else if (value < 0f) {
+            view.setTextColor(Color.RED);
+        }
     }
 
     public void addCryptoCurrencies(CryptoCurrency[] cryptoCurrencies) {
         this.items.addAll(Arrays.asList(cryptoCurrencies));
 
         this.notifyDataSetChanged();
-
-        System.out.println("Hey there 4: " + this.items.size());
     }
 }
