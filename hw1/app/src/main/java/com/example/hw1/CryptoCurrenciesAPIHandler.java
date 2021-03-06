@@ -1,19 +1,16 @@
 package com.example.hw1;
 
-import com.squareup.moshi.JsonAdapter;
-import com.squareup.moshi.Moshi;
-
 import java.io.IOException;
 import java.util.Objects;
 
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
+import okio.BufferedSource;
 
-public class CryptoCurrenciesAPIHandler extends Thread {
+public abstract class CryptoCurrenciesAPIHandler extends Thread {
     private final OkHttpClient client = new OkHttpClient();
-    private final Moshi moshi = new Moshi.Builder().build();
-    private final JsonAdapter<CryptoResponse> cryptoResponseJsonAdapter = moshi.adapter(CryptoResponse.class);
+
     private final String url;
 
     public CryptoCurrenciesAPIHandler(String url) {
@@ -30,22 +27,12 @@ public class CryptoCurrenciesAPIHandler extends Thread {
         try {
             try (Response response = client.newCall(request).execute()) {
                 if (!response.isSuccessful()) throw new IOException("Unexpected code " + response);
-
-                CryptoResponse jsonResponse = cryptoResponseJsonAdapter.fromJson(Objects.requireNonNull(response.body()).source());
-
-                assert jsonResponse != null;
-                UIHandler.showCryptoCurrencies(jsonResponse.data);
-
-                ItemsListFragment.isLoading.set(false);
-                ItemsListFragment.isEnded.set(jsonResponse.data.length == 20);
-                ItemsListFragment.pageNumber.set(ItemsListFragment.pageNumber.get() + 1);
+                requestCallback(Objects.requireNonNull(response.body()).source());
             }
         } catch (Exception e1) {
             e1.printStackTrace();
         }
     }
 
-    static class CryptoResponse {
-        CryptoCurrency[] data;
-    }
+    abstract void requestCallback(BufferedSource response) throws IOException;
 }

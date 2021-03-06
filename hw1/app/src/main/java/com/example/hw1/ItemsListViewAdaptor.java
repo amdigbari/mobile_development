@@ -18,11 +18,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 public class ItemsListViewAdaptor extends RecyclerView.Adapter<ItemsListViewAdaptor.ViewHolder> {
-    private final ArrayList<CryptoCurrency> items = new ArrayList<CryptoCurrency>();
-
+    private final ArrayList<CryptoCurrency> items = new ArrayList<>();
 
     public ItemsListViewAdaptor() {
-
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
