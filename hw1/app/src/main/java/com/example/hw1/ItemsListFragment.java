@@ -14,6 +14,10 @@ import com.squareup.moshi.JsonAdapter;
 import com.squareup.moshi.Moshi;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -25,6 +29,9 @@ public class ItemsListFragment extends Fragment {
     public AtomicBoolean isLoading = new AtomicBoolean(false);
     public AtomicBoolean isEnded = new AtomicBoolean(false);
     public ItemsListViewAdaptor mItemsListViewAdaptor;
+    private final ArrayList<CryptoCurrency> apiCryptoCurrencies = new ArrayList<>();
+    private final ArrayList<CryptoCurrency> cacheCryptoCurrencies = new ArrayList<>();
+    private final ArrayList<CryptoCurrency> cryptoCurrencies = new ArrayList<>();
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -34,7 +41,7 @@ public class ItemsListFragment extends Fragment {
         this.mRecyclerView.setHasFixedSize(true);
         LinearLayoutManager mLayoutManager = new LinearLayoutManager(view.getContext());
         this.mRecyclerView.setLayoutManager(mLayoutManager);
-        this.mItemsListViewAdaptor = new ItemsListViewAdaptor();
+        this.mItemsListViewAdaptor = new ItemsListViewAdaptor(cryptoCurrencies);
         this.mRecyclerView.setAdapter(this.mItemsListViewAdaptor);
 
         addButtonClickListener(view);
@@ -54,17 +61,32 @@ public class ItemsListFragment extends Fragment {
         });
     }
 
-//    private void getCryptoCurrenciesFromCache() {
-//        CacheTread cacheTread = new CacheTread(this.context) {
-//            @Override
-//            void readFromFileCallback(CryptoCurrency[] cryptoCurrencies) {
-//                for (CryptoCurrency cryptoCurrency : cryptoCurrencies) {
-//                    System.out.println("from cache: " + cryptoCurrency.name + '\n');
-//                }
-//            }
-//        };
-//        MainActivity.threadPoolExecutor.execute(cacheTread);
-//    }
+    private void getCryptoCurrenciesFromCache() {
+        CacheTread cacheTread = new CacheTread(this.getContext()) {
+            @Override
+            void readFromFileCallback(CryptoCurrency[] cryptoCurrencies) {
+                cacheCryptoCurrencies.addAll(Arrays.asList(cryptoCurrencies));
+                mergeCryptoCurrencies();
+            }
+        };
+        MainActivity.threadPoolExecutor.execute(cacheTread);
+    }
+
+    private void mergeCryptoCurrencies() {
+        Map<String, CryptoCurrency> cryptoCurrencyMap = new LinkedHashMap<>();
+        for (CryptoCurrency cryptoCurrency : apiCryptoCurrencies) {
+            cryptoCurrencyMap.put(cryptoCurrency.symbol, cryptoCurrency);
+        }
+        Map<String, CryptoCurrency> cacheCryptoCurrencyMap = new LinkedHashMap<>();
+        for (CryptoCurrency cryptoCurrency : cacheCryptoCurrencies) {
+            cacheCryptoCurrencyMap.put(cryptoCurrency.symbol, cryptoCurrency);
+        }
+        cryptoCurrencyMap.putAll(cacheCryptoCurrencyMap);
+
+        cryptoCurrencies.clear();
+        cryptoCurrencies.addAll(cryptoCurrencyMap.values());
+        this.mItemsListViewAdaptor.notifyDataSetChanged();
+    }
 
     private void getCryptoCurrencies(int pageNumber) {
         int itemPerRequest = 20;
@@ -92,20 +114,27 @@ public class ItemsListFragment extends Fragment {
 
         UIHandler uiHandler = new UIHandler(this, jsonResponse.data);
         MainActivity.threadPoolExecutor.execute(uiHandler);
-//                CacheTread cacheTread = new CacheTread(this.context, jsonResponse.data) {
-//                    @Override
-//                    void readFromFileCallback(CryptoCurrency[] cryptoCurrencies) {}
-//                };
-//                MainActivity.threadPoolExecutor.execute(cacheTread);
+
+        saveCryptoCurrenciesToCache();
     }
 
     private void initializeData() {
-//        getCryptoCurrenciesFromCache();
+        getCryptoCurrenciesFromCache();
         this.isLoading.set(true);
         getCryptoCurrencies(this.pageNumber.get());
     }
 
     public void setItemsListViewAdaptor(CryptoCurrency[] cryptoCurrencies) {
-        this.mItemsListViewAdaptor.addCryptoCurrencies(cryptoCurrencies);
+        this.apiCryptoCurrencies.addAll(Arrays.asList(cryptoCurrencies));
+        mergeCryptoCurrencies();
+    }
+
+    private void saveCryptoCurrenciesToCache() {
+        CacheTread cacheTread = new CacheTread(this.getContext(), this.cryptoCurrencies) {
+            @Override
+            void readFromFileCallback(CryptoCurrency[] cryptoCurrencies) {
+            }
+        };
+        MainActivity.threadPoolExecutor.execute(cacheTread);
     }
 }
