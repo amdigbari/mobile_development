@@ -18,11 +18,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 public class ItemsListViewAdaptor extends RecyclerView.Adapter<ItemsListViewAdaptor.ViewHolder> {
-    private final ArrayList<CryptoCurrency> items = new ArrayList<CryptoCurrency>();
+    private final ArrayList<CryptoCurrency> items;
 
-
-    public ItemsListViewAdaptor() {
-
+    public ItemsListViewAdaptor(ArrayList<CryptoCurrency> cryptoCurrencies) {
+        this.items = cryptoCurrencies;
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
@@ -80,11 +79,5 @@ public class ItemsListViewAdaptor extends RecyclerView.Adapter<ItemsListViewAdap
         } else if (value < 0f) {
             view.setTextColor(Color.RED);
         }
-    }
-
-    public void addCryptoCurrencies(CryptoCurrency[] cryptoCurrencies) {
-        this.items.addAll(Arrays.asList(cryptoCurrencies));
-
-        this.notifyDataSetChanged();
     }
 }

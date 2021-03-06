@@ -36,4 +36,7 @@ public class CryptoCurrency {
         }
     }
 
+    static class CryptoListResponse {
+        CryptoCurrency[] data;
+    }
 }
