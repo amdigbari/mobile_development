@@ -5,6 +5,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.Toast;
 
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -41,10 +42,12 @@ public class ItemsListFragment extends Fragment {
         this.mRecyclerView.setHasFixedSize(true);
         LinearLayoutManager mLayoutManager = new LinearLayoutManager(view.getContext());
         this.mRecyclerView.setLayoutManager(mLayoutManager);
-        this.mItemsListViewAdaptor = new ItemsListViewAdaptor(cryptoCurrencies);
+        this.mItemsListViewAdaptor = new ItemsListViewAdaptor(cryptoCurrencies, position -> {
+            Toast.makeText(getContext(), position + " ", Toast.LENGTH_SHORT).show();
+        });
         this.mRecyclerView.setAdapter(this.mItemsListViewAdaptor);
 
-        addButtonClickListener(view);
+//        addButtonClickListener(view);
         initializeData();
 
         return view;

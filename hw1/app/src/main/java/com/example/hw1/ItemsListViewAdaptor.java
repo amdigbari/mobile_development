@@ -20,8 +20,11 @@ import java.util.Arrays;
 public class ItemsListViewAdaptor extends RecyclerView.Adapter<ItemsListViewAdaptor.ViewHolder> {
     private final ArrayList<CryptoCurrency> items;
 
-    public ItemsListViewAdaptor(ArrayList<CryptoCurrency> cryptoCurrencies) {
+    private ItemListCallBack callBack;
+
+    public ItemsListViewAdaptor(ArrayList<CryptoCurrency> cryptoCurrencies, ItemListCallBack callBack) {
         this.items = cryptoCurrencies;
+        this.callBack = callBack;
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
@@ -63,6 +66,8 @@ public class ItemsListViewAdaptor extends RecyclerView.Adapter<ItemsListViewAdap
         showItemPercent(holder.itemDayDifference, item.quote.USD.percent_change_24h, "1d");
         showItemPercent(holder.itemWeekDifference, item.quote.USD.percent_change_7d, "7d");
         showItemPercent(holder.itemMonthDifference, item.quote.USD.percent_change_30d, "30d");
+        holder.itemView.setOnClickListener(v -> callBack.onItemClicked(position));
+
     }
 
     @Override
@@ -79,5 +84,9 @@ public class ItemsListViewAdaptor extends RecyclerView.Adapter<ItemsListViewAdap
         } else if (value < 0f) {
             view.setTextColor(Color.RED);
         }
+    }
+
+    public interface ItemListCallBack {
+        void onItemClicked(int position);
     }
 }
