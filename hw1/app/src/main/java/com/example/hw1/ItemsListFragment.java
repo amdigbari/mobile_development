@@ -5,6 +5,7 @@ import android.os.Handler;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
@@ -38,6 +39,7 @@ public class ItemsListFragment extends Fragment {
     private final ArrayList<CryptoCurrency> cacheCryptoCurrencies = new ArrayList<>();
     private final ArrayList<CryptoCurrency> cryptoCurrencies = new ArrayList<>();
     private ProgressBar progressBar;
+    private Button btnLoadMore;
 
     public ItemsListFragment(ExecutorService threadPoolExecutor) {
         this.threadPoolExecutor = threadPoolExecutor;
@@ -49,6 +51,7 @@ public class ItemsListFragment extends Fragment {
         View view = inflater.inflate(R.layout.items_list, container, false);
 
         progressBar = view.findViewById(R.id.progressBar);
+        btnLoadMore = view.findViewById(R.id.btn_load_more);
         this.mRecyclerView = view.findViewById(R.id.items_list);
         this.mRecyclerView.setHasFixedSize(true);
         LinearLayoutManager mLayoutManager = new LinearLayoutManager(view.getContext());
@@ -57,10 +60,14 @@ public class ItemsListFragment extends Fragment {
             Toast.makeText(getContext(), position + " ", Toast.LENGTH_SHORT).show();
             if (!isLoading.get()) {
                 isLoading.set(true);
-                getCryptoCurrencies(position);
+                getCryptoCurrencies(this.pageNumber.get());
             }
         });
         this.mRecyclerView.setAdapter(this.mItemsListViewAdaptor);
+
+        btnLoadMore.setOnClickListener(v -> {
+            getCryptoCurrencies(this.pageNumber.get());
+        });
 
         initializeData();
 
@@ -95,7 +102,8 @@ public class ItemsListFragment extends Fragment {
     }
 
     private void getCryptoCurrencies(int pageNumber) {
-        int itemPerRequest = 20;
+        int itemPerRequest = 5;
+        progressBar.setVisibility(View.VISIBLE);
         final int startItem = (pageNumber - 1) * itemPerRequest + 1;
         final String url = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?convert=USD&start=" +
                 startItem + "&limit=" + (itemPerRequest);
@@ -122,6 +130,7 @@ public class ItemsListFragment extends Fragment {
         threadPoolExecutor.execute(uiHandler);
 
         saveCryptoCurrenciesToCache();
+        mHandler.post(() -> progressBar.setVisibility(View.GONE));
     }
 
     private void initializeData() {
