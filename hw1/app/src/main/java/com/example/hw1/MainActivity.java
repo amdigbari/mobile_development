@@ -23,6 +23,6 @@ public class MainActivity extends AppCompatActivity {
 
 
     private void initializeUI() {
-        getSupportFragmentManager().beginTransaction().add(R.id.main_page, new ItemsListFragment()).commit();
+        getSupportFragmentManager().beginTransaction().add(R.id.main_page, new ItemsListFragment(threadPoolExecutor)).commit();
     }
 }

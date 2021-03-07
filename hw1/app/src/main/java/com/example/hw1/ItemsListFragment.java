@@ -1,10 +1,11 @@
 package com.example.hw1;
 
 import android.os.Bundle;
+import android.os.Handler;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
+import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import androidx.fragment.app.Fragment;
@@ -19,49 +20,51 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import okio.BufferedSource;
 
 public class ItemsListFragment extends Fragment {
+    private ExecutorService threadPoolExecutor;
     public RecyclerView mRecyclerView;
     public AtomicInteger pageNumber = new AtomicInteger(1);
     public AtomicBoolean isLoading = new AtomicBoolean(false);
     public AtomicBoolean isEnded = new AtomicBoolean(false);
     public ItemsListViewAdaptor mItemsListViewAdaptor;
+    private Handler mHandler = new Handler();
     private final ArrayList<CryptoCurrency> apiCryptoCurrencies = new ArrayList<>();
     private final ArrayList<CryptoCurrency> cacheCryptoCurrencies = new ArrayList<>();
     private final ArrayList<CryptoCurrency> cryptoCurrencies = new ArrayList<>();
+    private ProgressBar progressBar;
+
+    public ItemsListFragment(ExecutorService threadPoolExecutor) {
+        this.threadPoolExecutor = threadPoolExecutor;
+    }
+
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.items_list, container, false);
 
+        progressBar = view.findViewById(R.id.progressBar);
         this.mRecyclerView = view.findViewById(R.id.items_list);
         this.mRecyclerView.setHasFixedSize(true);
         LinearLayoutManager mLayoutManager = new LinearLayoutManager(view.getContext());
         this.mRecyclerView.setLayoutManager(mLayoutManager);
         this.mItemsListViewAdaptor = new ItemsListViewAdaptor(cryptoCurrencies, position -> {
             Toast.makeText(getContext(), position + " ", Toast.LENGTH_SHORT).show();
+            if (!isLoading.get()) {
+                isLoading.set(true);
+                getCryptoCurrencies(position);
+            }
         });
         this.mRecyclerView.setAdapter(this.mItemsListViewAdaptor);
 
-//        addButtonClickListener(view);
         initializeData();
 
         return view;
-    }
-
-    private void addButtonClickListener(View view) {
-
-        Button loadMore = view.findViewById(R.id.load_more);
-        loadMore.setOnClickListener(v -> {
-            if (!isLoading.get()) {
-                isLoading.set(true);
-                getCryptoCurrencies(pageNumber.get());
-            }
-        });
     }
 
     private void getCryptoCurrenciesFromCache() {
@@ -72,7 +75,7 @@ public class ItemsListFragment extends Fragment {
                 mergeCryptoCurrencies();
             }
         };
-        MainActivity.threadPoolExecutor.execute(cacheTread);
+        threadPoolExecutor.execute(cacheTread);
     }
 
     private void mergeCryptoCurrencies() {
@@ -96,7 +99,7 @@ public class ItemsListFragment extends Fragment {
         final int startItem = (pageNumber - 1) * itemPerRequest + 1;
         final String url = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?convert=USD&start=" +
                 startItem + "&limit=" + (itemPerRequest);
-        MainActivity.threadPoolExecutor.execute(new CryptoCurrenciesAPIHandler(url) {
+        threadPoolExecutor.execute(new CryptoCurrenciesAPIHandler(url) {
             @Override
             void requestCallback(BufferedSource response) throws IOException {
                 getCryptoCurrenciesCallback(response);
@@ -116,15 +119,18 @@ public class ItemsListFragment extends Fragment {
         this.pageNumber.set(this.pageNumber.get() + 1);
 
         UIHandler uiHandler = new UIHandler(this, jsonResponse.data);
-        MainActivity.threadPoolExecutor.execute(uiHandler);
+        threadPoolExecutor.execute(uiHandler);
 
         saveCryptoCurrenciesToCache();
     }
 
     private void initializeData() {
-        getCryptoCurrenciesFromCache();
-        this.isLoading.set(true);
-        getCryptoCurrencies(this.pageNumber.get());
+        if (Utils.isNetworkConnected(getContext())) {
+            getCryptoCurrencies(this.pageNumber.get());
+            this.isLoading.set(true);
+        } else {
+            getCryptoCurrenciesFromCache();
+        }
     }
 
     public void setItemsListViewAdaptor(CryptoCurrency[] cryptoCurrencies) {
@@ -138,6 +144,13 @@ public class ItemsListFragment extends Fragment {
             void readFromFileCallback(CryptoCurrency[] cryptoCurrencies) {
             }
         };
-        MainActivity.threadPoolExecutor.execute(cacheTread);
+        threadPoolExecutor.execute(cacheTread);
     }
+
+    @Override
+    public void onDestroy() {
+        threadPoolExecutor.shutdown();
+        super.onDestroy();
+    }
+
 }

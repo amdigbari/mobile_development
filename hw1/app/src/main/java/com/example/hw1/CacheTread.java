@@ -1,7 +1,9 @@
 package com.example.hw1;
 
 import android.annotation.SuppressLint;
+import android.app.Application;
 import android.content.Context;
+import android.util.Log;
 
 import com.google.gson.Gson;
 
@@ -20,6 +22,7 @@ import java.io.ObjectOutputStream;
 import java.io.OptionalDataException;
 import java.io.StreamCorruptedException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.Objects;
 
 import static com.google.android.material.internal.ContextUtils.getActivity;
@@ -56,8 +59,8 @@ public abstract class CacheTread extends Thread {
             for (CryptoCurrency cryptoCurrency : cryptoCurrencies) {
                 jsonArray.put(getCryptoCurrency(cryptoCurrency));
             }
-            @SuppressLint("RestrictedApi") ObjectOutput out = new ObjectOutputStream(new FileOutputStream
-                    (new File(Objects.requireNonNull(getActivity(this.context)).getCacheDir(), "") + File.separator + this.filename));
+            ObjectOutput out = new ObjectOutputStream(new FileOutputStream
+                    (new File(context.getCacheDir(), "") + File.separator + this.filename));
             out.writeObject(jsonArray.toString());
             out.close();
         } catch (FileNotFoundException e) {
