@@ -61,11 +61,11 @@ public abstract class CacheTread extends Thread {
             }
             ObjectOutput out = new ObjectOutputStream(new FileOutputStream
                     (new File(context.getCacheDir(), "") + File.separator + this.filename));
-            out.writeObject(jsonArray.toString());
-            out.close();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException | JSONException e) {
+            synchronized (CacheTread.class) {
+                out.writeObject(jsonArray.toString());
+                out.close();
+            }
+        } catch (IOException | JSONException | RuntimeException e) {
             e.printStackTrace();
         }
     }
