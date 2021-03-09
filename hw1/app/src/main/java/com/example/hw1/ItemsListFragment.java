@@ -130,11 +130,11 @@ public class ItemsListFragment extends Fragment {
             void callback() {
                 setItemsListViewAdaptor(jsonResponse.data);
                 progressBar.setVisibility(View.GONE);
+                saveCryptoCurrenciesToCache();
             }
         };
         threadPoolExecutor.execute(uiHandler);
 
-        saveCryptoCurrenciesToCache();
     }
 
     private void initializeData() {
