@@ -84,23 +84,30 @@ public class ItemsListFragment extends Fragment {
     }
 
     private void mergeCryptoCurrencies() {
-        Map<String, CryptoCurrency> cryptoCurrencyMap = new LinkedHashMap<>();
-        for (CryptoCurrency cryptoCurrency : apiCryptoCurrencies) {
-            cryptoCurrencyMap.put(cryptoCurrency.symbol, cryptoCurrency);
+        if (apiCryptoCurrencies.size() > 0) {
+            cryptoCurrencies.clear();
+            cryptoCurrencies.addAll(apiCryptoCurrencies);
+        } else if (cacheCryptoCurrencies.size() > 0) {
+            cryptoCurrencies.clear();
+            cryptoCurrencies.addAll(cacheCryptoCurrencies);
         }
-        Map<String, CryptoCurrency> cacheCryptoCurrencyMap = new LinkedHashMap<>();
-        for (CryptoCurrency cryptoCurrency : cacheCryptoCurrencies) {
-            cacheCryptoCurrencyMap.put(cryptoCurrency.symbol, cryptoCurrency);
-        }
-        cryptoCurrencyMap.putAll(cacheCryptoCurrencyMap);
-
-        cryptoCurrencies.clear();
-        cryptoCurrencies.addAll(cryptoCurrencyMap.values());
+//        Map<String, CryptoCurrency> cryptoCurrencyMap = new LinkedHashMap<>();
+//        for (CryptoCurrency cryptoCurrency : apiCryptoCurrencies) {
+//            cryptoCurrencyMap.put(cryptoCurrency.symbol, cryptoCurrency);
+//        }
+//        Map<String, CryptoCurrency> cacheCryptoCurrencyMap = new LinkedHashMap<>();
+//        for (CryptoCurrency cryptoCurrency : cacheCryptoCurrencies) {
+//            cacheCryptoCurrencyMap.put(cryptoCurrency.symbol, cryptoCurrency);
+//        }
+//        cryptoCurrencyMap.putAll(cacheCryptoCurrencyMap);
+//
+//        cryptoCurrencies.clear();
+//        cryptoCurrencies.addAll(cryptoCurrencyMap.values());
         this.mItemsListViewAdaptor.notifyDataSetChanged();
     }
 
     private void getCryptoCurrencies(int pageNumber) {
-        int itemPerRequest = 5;
+        int itemPerRequest = 10;
         this.isLoading.set(true);
         progressBar.setVisibility(View.VISIBLE);
         final int startItem = (pageNumber - 1) * itemPerRequest + 1;

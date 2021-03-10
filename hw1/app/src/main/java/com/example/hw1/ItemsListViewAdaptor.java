@@ -3,24 +3,33 @@ package com.example.hw1;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.squareup.picasso.Callback;
+import com.squareup.picasso.NetworkPolicy;
+import com.squareup.picasso.Picasso;
+
 import org.jetbrains.annotations.NotNull;
 
+import java.io.IOException;
+import java.net.URL;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.concurrent.ExecutorService;
 
 public class ItemsListViewAdaptor extends RecyclerView.Adapter<ItemsListViewAdaptor.ViewHolder> {
     private final ArrayList<CryptoCurrency> items;
 
-    private ItemListCallBack callBack;
+    private final ItemListCallBack callBack;
 
     public ItemsListViewAdaptor(ArrayList<CryptoCurrency> cryptoCurrencies, ItemListCallBack callBack) {
         this.items = cryptoCurrencies;
@@ -33,6 +42,7 @@ public class ItemsListViewAdaptor extends RecyclerView.Adapter<ItemsListViewAdap
         public TextView itemDayDifference;
         public TextView itemWeekDifference;
         public TextView itemMonthDifference;
+        public ImageView itemAvatar;
 
         public ViewHolder(View itemView) {
             super(itemView);
@@ -42,6 +52,7 @@ public class ItemsListViewAdaptor extends RecyclerView.Adapter<ItemsListViewAdap
             itemDayDifference = itemView.findViewById(R.id.item_day_difference);
             itemWeekDifference = itemView.findViewById(R.id.item_week_difference);
             itemMonthDifference = itemView.findViewById(R.id.item_month_difference);
+            itemAvatar = itemView.findViewById(R.id.item_avatar);
         }
     }
 
@@ -67,7 +78,7 @@ public class ItemsListViewAdaptor extends RecyclerView.Adapter<ItemsListViewAdap
         showItemPercent(holder.itemWeekDifference, item.quote.USD.percent_change_7d, "7d");
         showItemPercent(holder.itemMonthDifference, item.quote.USD.percent_change_30d, "30d");
         holder.itemView.setOnClickListener(v -> callBack.onItemClicked(position));
-
+        showImage("https://s2.coinmarketcap.com/static/img/coins/64x64/" + item.id + ".png", holder.itemAvatar);
     }
 
     @Override
@@ -88,5 +99,11 @@ public class ItemsListViewAdaptor extends RecyclerView.Adapter<ItemsListViewAdap
 
     public interface ItemListCallBack {
         void onItemClicked(int position);
+    }
+
+    private void showImage(String url, ImageView imageView) {
+        Picasso.get()
+                .load(url)
+                .into(imageView);
     }
 }
