@@ -55,10 +55,9 @@ public class ItemsListFragment extends Fragment implements SwipeRefreshLayout.On
         this.mRecyclerView.setLayoutManager(mLayoutManager);
         this.mItemsListViewAdaptor = new ItemsListViewAdaptor(cryptoCurrencies, position -> {
             Toast.makeText(getContext(), position + " ", Toast.LENGTH_SHORT).show();
-            if (!isLoading.get()) {
-                isLoading.set(true);
-                getCryptoCurrencies(this.pageNumber.get(), false);
-            }
+
+            getCryptoCurrencies(this.pageNumber.get(), false);
+
         });
         this.mRecyclerView.setAdapter(this.mItemsListViewAdaptor);
 
@@ -77,13 +76,11 @@ public class ItemsListFragment extends Fragment implements SwipeRefreshLayout.On
     }
 
     private void getCryptoCurrenciesFromCache() {
-        this.isLoading.set(true);
         CacheTread cacheTread = new CacheTread(this.getContext()) {
             @Override
             void readFromFileCallback(CryptoCurrency[] cryptoCurrencies) {
                 cacheCryptoCurrencies.addAll(Arrays.asList(cryptoCurrencies));
                 mergeCryptoCurrencies();
-                isLoading.set(false);
             }
         };
         threadPoolExecutor.execute(cacheTread);
@@ -112,22 +109,24 @@ public class ItemsListFragment extends Fragment implements SwipeRefreshLayout.On
     }
 
     private void getCryptoCurrencies(int page, boolean clear) {
-        int itemPerRequest = 10;
-        this.isLoading.set(true);
-        final int startItem = (page - 1) * itemPerRequest + 1;
-        final String url = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?convert=USD&start=" +
-                startItem + "&limit=" + (itemPerRequest);
-        threadPoolExecutor.execute(new CryptoCurrenciesAPIHandler(url) {
-            @Override
-            void requestCallback(BufferedSource response) throws IOException {
-                if (clear) {
-                    apiCryptoCurrencies.clear();
+        if (!this.isLoading.get()) {
+            int itemPerRequest = 10;
+            this.isLoading.set(true);
+            final int startItem = (page - 1) * itemPerRequest + 1;
+            final String url = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?convert=USD&start=" +
+                    startItem + "&limit=" + (itemPerRequest);
+            swipeRefreshLayout.setRefreshing(true);
+            threadPoolExecutor.execute(new CryptoCurrenciesAPIHandler(url) {
+                @Override
+                void requestCallback(BufferedSource response) throws IOException {
+                    if (clear) {
+                        apiCryptoCurrencies.clear();
+                    }
+                    getCryptoCurrenciesCallback(response);
+                    pageNumber.set(page + 1);
                 }
-                getCryptoCurrenciesCallback(response);
-                pageNumber.set(page + 1);
-                swipeRefreshLayout.setRefreshing(false);
-            }
-        });
+            });
+        }
     }
 
     private void getCryptoCurrenciesCallback(BufferedSource response) throws IOException {
@@ -139,6 +138,7 @@ public class ItemsListFragment extends Fragment implements SwipeRefreshLayout.On
 
         this.isLoading.set(false);
         this.isEnded.set(jsonResponse.data.length == 20);
+        swipeRefreshLayout.setRefreshing(false);
 
         UIHandler uiHandler = new UIHandler() {
             @Override
@@ -155,8 +155,6 @@ public class ItemsListFragment extends Fragment implements SwipeRefreshLayout.On
         getCryptoCurrenciesFromCache();
         if (Utils.isNetworkConnected(Objects.requireNonNull(getContext()))) {
             this.swipeRefreshLayout.post(() -> {
-                        swipeRefreshLayout.setRefreshing(true);
-
                         this.getCryptoCurrencies(1, true);
                     }
             );
