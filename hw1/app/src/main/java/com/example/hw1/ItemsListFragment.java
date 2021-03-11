@@ -5,12 +5,12 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.squareup.moshi.JsonAdapter;
 import com.squareup.moshi.Moshi;
@@ -27,7 +27,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import okio.BufferedSource;
 
-public class ItemsListFragment extends Fragment {
+public class ItemsListFragment extends Fragment implements SwipeRefreshLayout.OnRefreshListener {
     private final ExecutorService threadPoolExecutor;
     public RecyclerView mRecyclerView;
     public AtomicInteger pageNumber = new AtomicInteger(1);
@@ -37,7 +37,7 @@ public class ItemsListFragment extends Fragment {
     private final ArrayList<CryptoCurrency> apiCryptoCurrencies = new ArrayList<>();
     private final ArrayList<CryptoCurrency> cacheCryptoCurrencies = new ArrayList<>();
     private final ArrayList<CryptoCurrency> cryptoCurrencies = new ArrayList<>();
-    private ProgressBar progressBar;
+    private SwipeRefreshLayout swipeRefreshLayout;
 
     public ItemsListFragment(ExecutorService threadPoolExecutor) {
         this.threadPoolExecutor = threadPoolExecutor;
@@ -48,7 +48,6 @@ public class ItemsListFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.items_list, container, false);
 
-        progressBar = view.findViewById(R.id.progressBar);
         Button btnLoadMore = view.findViewById(R.id.btn_load_more);
         this.mRecyclerView = view.findViewById(R.id.items_list);
         this.mRecyclerView.setHasFixedSize(true);
@@ -58,16 +57,23 @@ public class ItemsListFragment extends Fragment {
             Toast.makeText(getContext(), position + " ", Toast.LENGTH_SHORT).show();
             if (!isLoading.get()) {
                 isLoading.set(true);
-                getCryptoCurrencies(this.pageNumber.get());
+                getCryptoCurrencies(this.pageNumber.get(), false);
             }
         });
         this.mRecyclerView.setAdapter(this.mItemsListViewAdaptor);
 
-        btnLoadMore.setOnClickListener(v -> getCryptoCurrencies(this.pageNumber.get()));
+        this.setRefreshListener(view);
+
+        btnLoadMore.setOnClickListener(v -> getCryptoCurrencies(this.pageNumber.get(), false));
 
         initializeData();
 
         return view;
+    }
+
+    private void setRefreshListener(View view) {
+        this.swipeRefreshLayout = view.findViewById(R.id.swipe_refresh_layout);
+        this.swipeRefreshLayout.setOnRefreshListener(this);
     }
 
     private void getCryptoCurrenciesFromCache() {
@@ -84,39 +90,42 @@ public class ItemsListFragment extends Fragment {
     }
 
     private void mergeCryptoCurrencies() {
+        Map<String, CryptoCurrency> cryptoCurrencyMap = new LinkedHashMap<>();
         if (apiCryptoCurrencies.size() > 0) {
             cryptoCurrencies.clear();
-            cryptoCurrencies.addAll(apiCryptoCurrencies);
+            for (CryptoCurrency cryptoCurrency : apiCryptoCurrencies) {
+                cryptoCurrencyMap.put(cryptoCurrency.symbol, cryptoCurrency);
+            }
         } else if (cacheCryptoCurrencies.size() > 0) {
             cryptoCurrencies.clear();
-            cryptoCurrencies.addAll(cacheCryptoCurrencies);
+            Map<String, CryptoCurrency> cacheCryptoCurrencyMap = new LinkedHashMap<>();
+            for (CryptoCurrency cryptoCurrency : cacheCryptoCurrencies) {
+                cacheCryptoCurrencyMap.put(cryptoCurrency.symbol, cryptoCurrency);
+            }
+            cryptoCurrencyMap.putAll(cacheCryptoCurrencyMap);
         }
-//        Map<String, CryptoCurrency> cryptoCurrencyMap = new LinkedHashMap<>();
-//        for (CryptoCurrency cryptoCurrency : apiCryptoCurrencies) {
-//            cryptoCurrencyMap.put(cryptoCurrency.symbol, cryptoCurrency);
-//        }
-//        Map<String, CryptoCurrency> cacheCryptoCurrencyMap = new LinkedHashMap<>();
-//        for (CryptoCurrency cryptoCurrency : cacheCryptoCurrencies) {
-//            cacheCryptoCurrencyMap.put(cryptoCurrency.symbol, cryptoCurrency);
-//        }
-//        cryptoCurrencyMap.putAll(cacheCryptoCurrencyMap);
-//
-//        cryptoCurrencies.clear();
-//        cryptoCurrencies.addAll(cryptoCurrencyMap.values());
+
+
+        cryptoCurrencies.clear();
+        cryptoCurrencies.addAll(cryptoCurrencyMap.values());
         this.mItemsListViewAdaptor.notifyDataSetChanged();
     }
 
-    private void getCryptoCurrencies(int pageNumber) {
+    private void getCryptoCurrencies(int page, boolean clear) {
         int itemPerRequest = 10;
         this.isLoading.set(true);
-        progressBar.setVisibility(View.VISIBLE);
-        final int startItem = (pageNumber - 1) * itemPerRequest + 1;
+        final int startItem = (page - 1) * itemPerRequest + 1;
         final String url = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?convert=USD&start=" +
                 startItem + "&limit=" + (itemPerRequest);
         threadPoolExecutor.execute(new CryptoCurrenciesAPIHandler(url) {
             @Override
             void requestCallback(BufferedSource response) throws IOException {
+                if (clear) {
+                    apiCryptoCurrencies.clear();
+                }
                 getCryptoCurrenciesCallback(response);
+                pageNumber.set(page + 1);
+                swipeRefreshLayout.setRefreshing(false);
             }
         });
     }
@@ -130,13 +139,11 @@ public class ItemsListFragment extends Fragment {
 
         this.isLoading.set(false);
         this.isEnded.set(jsonResponse.data.length == 20);
-        this.pageNumber.set(this.pageNumber.get() + 1);
 
         UIHandler uiHandler = new UIHandler() {
             @Override
             void callback() {
                 setItemsListViewAdaptor(jsonResponse.data);
-                progressBar.setVisibility(View.GONE);
                 saveCryptoCurrenciesToCache();
             }
         };
@@ -147,7 +154,12 @@ public class ItemsListFragment extends Fragment {
     private void initializeData() {
         getCryptoCurrenciesFromCache();
         if (Utils.isNetworkConnected(Objects.requireNonNull(getContext()))) {
-            getCryptoCurrencies(this.pageNumber.get());
+            this.swipeRefreshLayout.post(() -> {
+                        swipeRefreshLayout.setRefreshing(true);
+
+                        this.getCryptoCurrencies(1, true);
+                    }
+            );
         }
     }
 
@@ -171,4 +183,8 @@ public class ItemsListFragment extends Fragment {
         super.onDestroy();
     }
 
+    @Override
+    public void onRefresh() {
+        getCryptoCurrencies(1, true);
+    }
 }
