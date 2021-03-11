@@ -6,7 +6,6 @@ import java.util.Objects;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
-import okio.BufferedSource;
 
 public abstract class CryptoCurrenciesAPIHandler extends Thread {
     private final OkHttpClient client = new OkHttpClient();
@@ -27,12 +26,12 @@ public abstract class CryptoCurrenciesAPIHandler extends Thread {
         try {
             try (Response response = client.newCall(request).execute()) {
                 if (!response.isSuccessful()) throw new IOException("Unexpected code " + response);
-                requestCallback(Objects.requireNonNull(response.body()).source());
+                requestCallback(Objects.requireNonNull(response.body()).string());
             }
         } catch (Exception e1) {
             e1.printStackTrace();
         }
     }
 
-    abstract void requestCallback(BufferedSource response) throws IOException;
+    abstract void requestCallback(String response) throws IOException;
 }

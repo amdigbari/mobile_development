@@ -12,10 +12,13 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
-import com.squareup.moshi.JsonAdapter;
-import com.squareup.moshi.Moshi;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
-import java.io.IOException;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -24,8 +27,6 @@ import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import okio.BufferedSource;
 
 public class ItemsListFragment extends Fragment implements SwipeRefreshLayout.OnRefreshListener {
     private final ExecutorService threadPoolExecutor;
@@ -118,7 +119,7 @@ public class ItemsListFragment extends Fragment implements SwipeRefreshLayout.On
             swipeRefreshLayout.setRefreshing(true);
             threadPoolExecutor.execute(new CryptoCurrenciesAPIHandler(url) {
                 @Override
-                void requestCallback(BufferedSource response) throws IOException {
+                void requestCallback(String response) {
                     if (clear) {
                         apiCryptoCurrencies.clear();
                     }
@@ -129,35 +130,33 @@ public class ItemsListFragment extends Fragment implements SwipeRefreshLayout.On
         }
     }
 
-    private void getCryptoCurrenciesCallback(BufferedSource response) throws IOException {
-        final Moshi moshi = new Moshi.Builder().build();
-        final JsonAdapter<CryptoCurrency.CryptoListResponse> cryptoResponseJsonAdapter = moshi.adapter(CryptoCurrency.CryptoListResponse.class);
-        CryptoCurrency.CryptoListResponse jsonResponse = cryptoResponseJsonAdapter.fromJson(response);
+    private void getCryptoCurrenciesCallback(String response) {
+        try {
+            final JSONArray data = new JSONObject(response).getJSONArray("data");
+            Gson gson = new GsonBuilder().create();
+            CryptoCurrency[] responseData = gson.fromJson(data.toString(), CryptoCurrency[].class);
 
-        assert jsonResponse != null;
+            this.isLoading.set(false);
+            this.isEnded.set(responseData.length == 20);
 
-        this.isLoading.set(false);
-        this.isEnded.set(jsonResponse.data.length == 20);
+            UIHandler uiHandler = new UIHandler() {
+                @Override
+                void callback() {
+                    setItemsListViewAdaptor(responseData);
+                    saveCryptoCurrenciesToCache();
+                }
+            };
+            threadPoolExecutor.execute(uiHandler);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
         swipeRefreshLayout.setRefreshing(false);
-
-        UIHandler uiHandler = new UIHandler() {
-            @Override
-            void callback() {
-                setItemsListViewAdaptor(jsonResponse.data);
-                saveCryptoCurrenciesToCache();
-            }
-        };
-        threadPoolExecutor.execute(uiHandler);
-
     }
 
     private void initializeData() {
         getCryptoCurrenciesFromCache();
         if (Utils.isNetworkConnected(Objects.requireNonNull(getContext()))) {
-            this.swipeRefreshLayout.post(() -> {
-                        this.getCryptoCurrencies(1, true);
-                    }
-            );
+            this.swipeRefreshLayout.post(() -> this.getCryptoCurrencies(1, true));
         }
     }
 
