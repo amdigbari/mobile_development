@@ -93,14 +93,14 @@ public abstract class CacheTread extends Thread {
     private JSONObject getCryptoCurrency(CryptoCurrency cryptoCurrency) throws JSONException {
         JSONObject jsonObject = new JSONObject();
 
-        jsonObject.put("name", cryptoCurrency.name);
-        jsonObject.put("id", cryptoCurrency.id);
-        jsonObject.put("symbol", cryptoCurrency.symbol);
+        jsonObject.put("name", cryptoCurrency.getName());
+        jsonObject.put("id", cryptoCurrency.getId());
+        jsonObject.put("symbol", cryptoCurrency.getSymbol());
         JSONObject usd = new JSONObject()
-                .put("price", cryptoCurrency.quote.USD.price)
-                .put("percent_change_24h", cryptoCurrency.quote.USD.percent_change_24h)
-                .put("percent_change_7d", cryptoCurrency.quote.USD.percent_change_7d)
-                .put("percent_change_30d", cryptoCurrency.quote.USD.percent_change_30d);
+                .put("price", cryptoCurrency.getQuote().getUSD().getPrice())
+                .put("percent_change_24h", cryptoCurrency.getQuote().getUSD().getPercent_change_24h())
+                .put("percent_change_7d", cryptoCurrency.getQuote().getUSD().getPercent_change_7d())
+                .put("percent_change_30d", cryptoCurrency.getQuote().getUSD().getPercent_change_30d());
         jsonObject.put("quote", new JSONObject().put("USD", usd));
 
         return jsonObject;

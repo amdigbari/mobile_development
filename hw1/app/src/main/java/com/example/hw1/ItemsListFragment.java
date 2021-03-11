@@ -9,6 +9,7 @@ import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentTransaction;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -55,11 +56,16 @@ public class ItemsListFragment extends Fragment {
         LinearLayoutManager mLayoutManager = new LinearLayoutManager(view.getContext());
         this.mRecyclerView.setLayoutManager(mLayoutManager);
         this.mItemsListViewAdaptor = new ItemsListViewAdaptor(cryptoCurrencies, position -> {
-            Toast.makeText(getContext(), position + " ", Toast.LENGTH_SHORT).show();
-            if (!isLoading.get()) {
-                isLoading.set(true);
-                getCryptoCurrencies(this.pageNumber.get());
-            }
+
+            FragmentTransaction ft = requireActivity().getSupportFragmentManager().beginTransaction();
+            ft.setCustomAnimations(R.anim.fade_in, R.anim.fade_out, R.anim.fade_in, R.anim.fade_out);
+            ft.replace(R.id.main_page, new CoinFragment(mItemsListViewAdaptor.getItem(position))).addToBackStack(null);
+            ft.commit();
+
+//            if (!isLoading.get()) {
+//                isLoading.set(true);
+//                getCryptoCurrencies(this.pageNumber.get());
+//            }
         });
         this.mRecyclerView.setAdapter(this.mItemsListViewAdaptor);
 

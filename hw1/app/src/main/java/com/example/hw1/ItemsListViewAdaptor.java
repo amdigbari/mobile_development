@@ -72,13 +72,13 @@ public class ItemsListViewAdaptor extends RecyclerView.Adapter<ItemsListViewAdap
     public void onBindViewHolder(ItemsListViewAdaptor.ViewHolder holder, int position) {
         CryptoCurrency item = this.items.get(position);
 
-        holder.itemNameText.setText(item.symbol + " | " + item.name);
-        holder.itemPriceText.setText(item.quote.USD.price.toString() + "$");
-        showItemPercent(holder.itemDayDifference, item.quote.USD.percent_change_24h, "1d");
-        showItemPercent(holder.itemWeekDifference, item.quote.USD.percent_change_7d, "7d");
-        showItemPercent(holder.itemMonthDifference, item.quote.USD.percent_change_30d, "30d");
+        holder.itemNameText.setText(item.getSymbol() + " | " + item.getName());
+        holder.itemPriceText.setText(item.getQuote().getUSD().getPrice().toString() + "$");
+        showItemPercent(holder.itemDayDifference, item.getQuote().getUSD().getPercent_change_24h(), "1d");
+        showItemPercent(holder.itemWeekDifference, item.getQuote().getUSD().getPercent_change_7d(), "7d");
+        showItemPercent(holder.itemMonthDifference, item.getQuote().getUSD().getPercent_change_30d(), "30d");
         holder.itemView.setOnClickListener(v -> callBack.onItemClicked(position));
-        showImage("https://s2.coinmarketcap.com/static/img/coins/64x64/" + item.id + ".png", holder.itemAvatar);
+        showImage("https://s2.coinmarketcap.com/static/img/coins/64x64/" + item.getId() + ".png", holder.itemAvatar);
     }
 
     @Override
@@ -105,5 +105,9 @@ public class ItemsListViewAdaptor extends RecyclerView.Adapter<ItemsListViewAdap
         Picasso.get()
                 .load(url)
                 .into(imageView);
+    }
+
+    public CryptoCurrency getItem(int position) {
+        return items.get(position);
     }
 }
