@@ -23,15 +23,15 @@ public class CryptoCurrency {
 
         public static class USD {
             public Float price;
+            public Float percent_change_1h;
             public Float percent_change_24h;
             public Float percent_change_7d;
-            public Float percent_change_30d;
 
-            public USD(Float price, Float percent_change_24h, Float percent_change_7d, Float percent_change_30d) {
+            public USD(Float price, Float percent_change_1h, Float percent_change_24h, Float percent_change_7d) {
                 this.price = price;
+                this.percent_change_1h = percent_change_1h;
                 this.percent_change_24h = percent_change_24h;
                 this.percent_change_7d = percent_change_7d;
-                this.percent_change_30d = percent_change_30d;
             }
         }
     }

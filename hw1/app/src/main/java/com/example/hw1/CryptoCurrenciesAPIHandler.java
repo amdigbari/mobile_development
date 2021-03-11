@@ -13,6 +13,7 @@ public abstract class CryptoCurrenciesAPIHandler extends Thread {
     private final String url;
 
     public CryptoCurrenciesAPIHandler(String url) {
+        super();
         this.url = url;
     }
 

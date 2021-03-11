@@ -8,7 +8,9 @@ public abstract class UIHandler extends Thread {
     public WeakHandler handler = new WeakHandler(Looper.getMainLooper());
 
 
-    public UIHandler() {}
+    public UIHandler() {
+        super();
+    }
 
     @Override
     public void run() {

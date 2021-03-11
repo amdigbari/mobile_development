@@ -31,6 +31,7 @@ public abstract class CacheTread extends Thread {
     private final String filename = "crypto_currencies.json";
 
     public CacheTread(Context context, ArrayList<CryptoCurrency> cryptoCurrencies) {
+        super();
         this.context = context;
         this.isWrite = true;
         this.cryptoCurrencies = cryptoCurrencies;
@@ -95,9 +96,9 @@ public abstract class CacheTread extends Thread {
         jsonObject.put("symbol", cryptoCurrency.symbol);
         JSONObject usd = new JSONObject()
                 .put("price", cryptoCurrency.quote.USD.price)
+                .put("percent_change_1h", cryptoCurrency.quote.USD.percent_change_1h)
                 .put("percent_change_24h", cryptoCurrency.quote.USD.percent_change_24h)
-                .put("percent_change_7d", cryptoCurrency.quote.USD.percent_change_7d)
-                .put("percent_change_30d", cryptoCurrency.quote.USD.percent_change_30d);
+                .put("percent_change_7d", cryptoCurrency.quote.USD.percent_change_7d);
         jsonObject.put("quote", new JSONObject().put("USD", usd));
 
         return jsonObject;

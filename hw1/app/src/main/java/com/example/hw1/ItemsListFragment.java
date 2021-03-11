@@ -41,6 +41,7 @@ public class ItemsListFragment extends Fragment implements SwipeRefreshLayout.On
     private SwipeRefreshLayout swipeRefreshLayout;
 
     public ItemsListFragment(ExecutorService threadPoolExecutor) {
+        super();
         this.threadPoolExecutor = threadPoolExecutor;
     }
 
@@ -77,14 +78,13 @@ public class ItemsListFragment extends Fragment implements SwipeRefreshLayout.On
     }
 
     private void getCryptoCurrenciesFromCache() {
-        CacheTread cacheTread = new CacheTread(this.getContext()) {
+        threadPoolExecutor.execute(new CacheTread(this.getContext()) {
             @Override
             void readFromFileCallback(CryptoCurrency[] cryptoCurrencies) {
                 cacheCryptoCurrencies.addAll(Arrays.asList(cryptoCurrencies));
                 mergeCryptoCurrencies();
             }
-        };
-        threadPoolExecutor.execute(cacheTread);
+        });
     }
 
     private void mergeCryptoCurrencies() {
@@ -139,14 +139,13 @@ public class ItemsListFragment extends Fragment implements SwipeRefreshLayout.On
             this.isLoading.set(false);
             this.isEnded.set(responseData.length == 20);
 
-            UIHandler uiHandler = new UIHandler() {
+            threadPoolExecutor.execute(new UIHandler() {
                 @Override
                 void callback() {
                     setItemsListViewAdaptor(responseData);
                     saveCryptoCurrenciesToCache();
                 }
-            };
-            threadPoolExecutor.execute(uiHandler);
+            });
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -166,12 +165,11 @@ public class ItemsListFragment extends Fragment implements SwipeRefreshLayout.On
     }
 
     private void saveCryptoCurrenciesToCache() {
-        CacheTread cacheTread = new CacheTread(this.getContext(), this.cryptoCurrencies) {
+        threadPoolExecutor.execute(new CacheTread(this.getContext(), this.cryptoCurrencies) {
             @Override
             void readFromFileCallback(CryptoCurrency[] cryptoCurrencies) {
             }
-        };
-        threadPoolExecutor.execute(cacheTread);
+        });
     }
 
     @Override
