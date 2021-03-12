@@ -59,7 +59,7 @@ public class ItemsListFragment extends Fragment {
 
             FragmentTransaction ft = requireActivity().getSupportFragmentManager().beginTransaction();
             ft.setCustomAnimations(R.anim.fade_in, R.anim.fade_out, R.anim.fade_in, R.anim.fade_out);
-            ft.replace(R.id.main_page, new CoinFragment(mItemsListViewAdaptor.getItem(position))).addToBackStack(null);
+            ft.replace(R.id.main_page, new CoinFragment(mItemsListViewAdaptor.getItem(position), threadPoolExecutor)).addToBackStack(null);
             ft.commit();
 
 //            if (!isLoading.get()) {
@@ -125,6 +125,10 @@ public class ItemsListFragment extends Fragment {
                 getCryptoCurrenciesCallback(response);
             }
         });
+    }
+
+    private void getOHLC(int pageNumber) {
+
     }
 
     private void getCryptoCurrenciesCallback(BufferedSource response) throws IOException {

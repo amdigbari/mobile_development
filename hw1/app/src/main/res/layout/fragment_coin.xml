@@ -8,6 +8,7 @@
     tools:context=".CoinFragment">
 
     <FrameLayout
+        android:id="@+id/frameLayout"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         app:layout_constraintBottom_toBottomOf="parent"
@@ -16,10 +17,46 @@
         app:layout_constraintTop_toTopOf="parent">
 
         <com.scichart.charting.visuals.SciChartSurface
+            android:background="@color/carbon_white"
             android:id="@+id/surface"
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
     </FrameLayout>
+
+
+    <ProgressBar
+        android:id="@+id/progressBar2"
+        style="?android:attr/progressBarStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <carbon.widget.Button
+        android:id="@+id/btn_last_week"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        app:layout_constraintStart_toEndOf="@id/btn_last_month"
+        android:text="Last Week"
+        android:textSize="18sp"
+        android:textColor="@color/carbon_black"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <carbon.widget.Button
+        android:id="@+id/btn_last_month"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        app:layout_constraintTop_toTopOf="parent"
+        android:text="Last Month"
+        android:textSize="18sp"
+        android:textColor="@color/carbon_black"
+        app:layout_constraintEnd_toStartOf="@+id/btn_last_week"
+        app:layout_constraintStart_toStartOf="@+id/frameLayout" />
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>

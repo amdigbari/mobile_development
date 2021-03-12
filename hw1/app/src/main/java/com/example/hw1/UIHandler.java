@@ -11,7 +11,7 @@ public abstract class UIHandler extends Thread {
 
     @Override
     public void run() {
-        handler.post(() -> callback());
+        handler.post(this::callback);
     }
 
     abstract void callback();
