@@ -1,9 +1,7 @@
 package com.example.hw1;
 
 import android.annotation.SuppressLint;
-import android.app.Application;
 import android.content.Context;
-import android.util.Log;
 
 import com.google.gson.Gson;
 
@@ -22,7 +20,6 @@ import java.io.ObjectOutputStream;
 import java.io.OptionalDataException;
 import java.io.StreamCorruptedException;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.Objects;
 
 import static com.google.android.material.internal.ContextUtils.getActivity;
@@ -34,6 +31,7 @@ public abstract class CacheTread extends Thread {
     private final String filename = "crypto_currencies.json";
 
     public CacheTread(Context context, ArrayList<CryptoCurrency> cryptoCurrencies) {
+        super();
         this.context = context;
         this.isWrite = true;
         this.cryptoCurrencies = cryptoCurrencies;
@@ -98,9 +96,9 @@ public abstract class CacheTread extends Thread {
         jsonObject.put("symbol", cryptoCurrency.getSymbol());
         JSONObject usd = new JSONObject()
                 .put("price", cryptoCurrency.getQuote().getUSD().getPrice())
+                .put("percent_change_1h", cryptoCurrency.getQuote().getUSD().getPercent_change_1h())
                 .put("percent_change_24h", cryptoCurrency.getQuote().getUSD().getPercent_change_24h())
-                .put("percent_change_7d", cryptoCurrency.getQuote().getUSD().getPercent_change_7d())
-                .put("percent_change_30d", cryptoCurrency.getQuote().getUSD().getPercent_change_30d());
+                .put("percent_change_7d", cryptoCurrency.getQuote().getUSD().getPercent_change_7d());
         jsonObject.put("quote", new JSONObject().put("USD", usd));
 
         return jsonObject;

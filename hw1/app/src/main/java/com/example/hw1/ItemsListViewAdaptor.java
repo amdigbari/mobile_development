@@ -3,8 +3,6 @@ package com.example.hw1;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -14,17 +12,13 @@ import android.widget.TextView;
 
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.squareup.picasso.Callback;
-import com.squareup.picasso.NetworkPolicy;
-import com.squareup.picasso.Picasso;
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
 
 import org.jetbrains.annotations.NotNull;
 
-import java.io.IOException;
-import java.net.URL;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
-import java.util.concurrent.ExecutorService;
 
 public class ItemsListViewAdaptor extends RecyclerView.Adapter<ItemsListViewAdaptor.ViewHolder> {
     private final ArrayList<CryptoCurrency> items;
@@ -32,6 +26,7 @@ public class ItemsListViewAdaptor extends RecyclerView.Adapter<ItemsListViewAdap
     private final ItemListCallBack callBack;
 
     public ItemsListViewAdaptor(ArrayList<CryptoCurrency> cryptoCurrencies, ItemListCallBack callBack) {
+        super();
         this.items = cryptoCurrencies;
         this.callBack = callBack;
     }
@@ -39,9 +34,9 @@ public class ItemsListViewAdaptor extends RecyclerView.Adapter<ItemsListViewAdap
     public static class ViewHolder extends RecyclerView.ViewHolder {
         public TextView itemNameText;
         public TextView itemPriceText;
+        public TextView itemHourDifference;
         public TextView itemDayDifference;
         public TextView itemWeekDifference;
-        public TextView itemMonthDifference;
         public ImageView itemAvatar;
 
         public ViewHolder(View itemView) {
@@ -49,9 +44,9 @@ public class ItemsListViewAdaptor extends RecyclerView.Adapter<ItemsListViewAdap
 
             itemNameText = itemView.findViewById(R.id.item_name);
             itemPriceText = itemView.findViewById(R.id.item_price);
+            itemHourDifference = itemView.findViewById(R.id.item_hour_difference);
             itemDayDifference = itemView.findViewById(R.id.item_day_difference);
             itemWeekDifference = itemView.findViewById(R.id.item_week_difference);
-            itemMonthDifference = itemView.findViewById(R.id.item_month_difference);
             itemAvatar = itemView.findViewById(R.id.item_avatar);
         }
     }
@@ -74,9 +69,9 @@ public class ItemsListViewAdaptor extends RecyclerView.Adapter<ItemsListViewAdap
 
         holder.itemNameText.setText(item.getSymbol() + " | " + item.getName());
         holder.itemPriceText.setText(item.getQuote().getUSD().getPrice().toString() + "$");
-        showItemPercent(holder.itemDayDifference, item.getQuote().getUSD().getPercent_change_24h(), "1d");
-        showItemPercent(holder.itemWeekDifference, item.getQuote().getUSD().getPercent_change_7d(), "7d");
-        showItemPercent(holder.itemMonthDifference, item.getQuote().getUSD().getPercent_change_30d(), "30d");
+        showItemPercent(holder.itemDayDifference, item.getQuote().getUSD().getPercent_change_24h(), "1h");
+        showItemPercent(holder.itemWeekDifference, item.getQuote().getUSD().getPercent_change_7d(), "24h");
+        showItemPercent(holder.itemMonthDifference, item.getQuote().getUSD().getPercent_change_30d(), "7d");
         holder.itemView.setOnClickListener(v -> callBack.onItemClicked(position));
         showImage("https://s2.coinmarketcap.com/static/img/coins/64x64/" + item.getId() + ".png", holder.itemAvatar);
     }
@@ -102,8 +97,9 @@ public class ItemsListViewAdaptor extends RecyclerView.Adapter<ItemsListViewAdap
     }
 
     private void showImage(String url, ImageView imageView) {
-        Picasso.get()
+        Glide.with(imageView.getContext())
                 .load(url)
+                .override(75, 75)
                 .into(imageView);
     }
 

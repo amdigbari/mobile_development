@@ -31,15 +31,15 @@ public class CryptoCurrency {
 
         public static class USD {
             private Float price;
+            private Float percent_change_1h;
             private Float percent_change_24h;
             private Float percent_change_7d;
-            private Float percent_change_30d;
 
-            public USD(Float price, Float percent_change_24h, Float percent_change_7d, Float percent_change_30d) {
+            public USD(Float price, Float percent_change_1h, Float percent_change_24h, Float percent_change_7d) {
                 this.price = price;
+                this.percent_change_1h = percent_change_1h;
                 this.percent_change_24h = percent_change_24h;
                 this.percent_change_7d = percent_change_7d;
-                this.percent_change_30d = percent_change_30d;
             }
 
             public Float getPrice() {
@@ -48,6 +48,14 @@ public class CryptoCurrency {
 
             public void setPrice(Float price) {
                 this.price = price;
+            }
+
+            public Float getPercent_change_1h() {
+                return percent_change_1h;
+            }
+
+            public void setPercent_change_1h(Float percent_change_30d) {
+                this.percent_change_1h = percent_change_1h;
             }
 
             public Float getPercent_change_24h() {
@@ -64,14 +72,6 @@ public class CryptoCurrency {
 
             public void setPercent_change_7d(Float percent_change_7d) {
                 this.percent_change_7d = percent_change_7d;
-            }
-
-            public Float getPercent_change_30d() {
-                return percent_change_30d;
-            }
-
-            public void setPercent_change_30d(Float percent_change_30d) {
-                this.percent_change_30d = percent_change_30d;
             }
         }
     }
