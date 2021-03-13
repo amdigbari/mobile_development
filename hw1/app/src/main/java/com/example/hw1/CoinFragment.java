@@ -161,7 +161,8 @@ public class CoinFragment extends Fragment {
 
         String url = "https://rest.coinapi.io/v1/ohlcv/BITSTAMP_SPOT_BTC_USD/history?period_id=" +
                 "1MIN" + "&time_start=" +
-                formatter.format(date.getTime()).replace(" ", "T");
+                formatter.format(date.getTime()).replace(" ", "T") +
+                "&symbol_id=" + cryptoCurrency.getSymbol();
         threadPoolExecutor.execute(new OhlcApiHandler(url) {
             @Override
             void requestCallback(BufferedSource response) throws IOException {

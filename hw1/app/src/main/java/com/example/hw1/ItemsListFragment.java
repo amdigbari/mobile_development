@@ -109,7 +109,10 @@ public class ItemsListFragment extends Fragment {
 //
 //        cryptoCurrencies.clear();
 //        cryptoCurrencies.addAll(cryptoCurrencyMap.values());
-        this.mItemsListViewAdaptor.notifyDataSetChanged();
+        try {
+            this.mItemsListViewAdaptor.notifyDataSetChanged();
+        } catch (Exception e) {
+        }
     }
 
     private void getCryptoCurrencies(int pageNumber) {
@@ -150,7 +153,11 @@ public class ItemsListFragment extends Fragment {
                 saveCryptoCurrenciesToCache();
             }
         };
-        threadPoolExecutor.execute(uiHandler);
+
+        try {
+            threadPoolExecutor.execute(uiHandler);//to prevent crash
+        } catch (Exception e) {
+        }
 
     }
 
