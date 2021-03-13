@@ -9,6 +9,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.DecelerateInterpolator;
+import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
@@ -24,6 +25,10 @@ import com.squareup.moshi.JsonAdapter;
 import com.squareup.moshi.Moshi;
 
 import java.io.IOException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -42,9 +47,14 @@ public class CoinFragment extends Fragment {
     public CryptoCurrency cryptoCurrency;
     public SciChartSurface surface;
     public ProgressBar progressBar;
+    Button btnLastWeek, btnLastMonth;
     public AtomicBoolean isLoading = new AtomicBoolean(false);
     public AtomicBoolean isEnded = new AtomicBoolean(false);
     public List<OHLC> ohlcList = new ArrayList<>();
+
+    IOhlcDataSeries<Date, Double> dataSeries = new OhlcDataSeries<>(Date.class, Double.class);
+
+    boolean isWeek  = true;
 
 
     public CoinFragment(CryptoCurrency cryptoCurrency, ExecutorService threadPoolExecutor) {
@@ -57,10 +67,33 @@ public class CoinFragment extends Fragment {
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_coin, container, false);
         surface = view.findViewById(R.id.surface);
+        btnLastMonth = view.findViewById(R.id.btn_last_month);
+        btnLastWeek = view.findViewById(R.id.btn_last_week);
 
         progressBar = view.findViewById(R.id.progressBar2);
 
-        getOhlc();
+        btnLastWeek.setOnClickListener(v -> {
+            btnLastWeek.setBackgroundColor(getResources().getColor(R.color.carbon_green_600));
+            btnLastMonth.setBackgroundColor(getResources().getColor(R.color.white));
+            isWeek = true;
+            dataSeries.clear();
+            getOhlc(isWeek);
+        });
+
+        btnLastMonth.setOnClickListener(v -> {
+            btnLastMonth.setBackgroundColor(getResources().getColor(R.color.carbon_green_600));
+            btnLastWeek.setBackgroundColor(getResources().getColor(R.color.white));
+            isWeek = false;
+            dataSeries.clear();
+            getOhlc(isWeek);
+        });
+
+        initSciChart();
+
+
+
+
+        getOhlc(isWeek);
 
         return view;
 
@@ -76,11 +109,6 @@ public class CoinFragment extends Fragment {
         final IAxis xAxis = sciChartBuilder.newCategoryDateAxis().withVisibleRange(size - 30, size).withGrowBy(0, 0.1).build();
         final IAxis yAxis = sciChartBuilder.newNumericAxis().withGrowBy(0d, 0.1d).withAutoRangeMode(AutoRange.Always).build();
 
-        IOhlcDataSeries<Integer, Double> dataSeries = new OhlcDataSeries<>(Integer.class, Double.class);
-        for (int i = 0; i < ohlcList.size(); i++) {
-
-            dataSeries.append(i/*priceSeries.getDateData()*/, ohlcList.get(i).getPrice_open(), ohlcList.get(i).getPrice_high(), ohlcList.get(i).getPrice_low(), ohlcList.get(i).getPrice_close());
-        }
 
         final FastCandlestickRenderableSeries rSeries = sciChartBuilder.newCandlestickSeries()
                 .withStrokeUp(0xFF00AA00)
@@ -89,6 +117,12 @@ public class CoinFragment extends Fragment {
                 .withFillDownColor(0x88FF0000)
                 .withDataSeries(dataSeries)
                 .build();
+
+        surface.zoomExtentsX();
+        surface.zoomExtentsY();
+
+//        yAxis.setAutoRange(AutoRange.Never);
+//        xAxis.setAutoRange(AutoRange.Never);
 
         UpdateSuspender.using(surface, () -> {
             Collections.addAll(surface.getXAxes(), xAxis);
@@ -101,12 +135,40 @@ public class CoinFragment extends Fragment {
 
     }
 
-    private void getOhlc() {
+    private void appendPoints() {
+        for (int i = 0; i < ohlcList.size(); i++) {
+            String[] strings = ohlcList.get(i).getTime_period_start().split("T");
+            SimpleDateFormat formatter2 = new SimpleDateFormat("yyyy-MM-dd");
+            Date date2 = null;
+            try {
+                date2 = formatter2.parse(strings[0]);
+            } catch (ParseException e) {
+                e.printStackTrace();
+            }
+
+            dataSeries.append(date2, ohlcList.get(i).getPrice_open(), ohlcList.get(i).getPrice_high(), ohlcList.get(i).getPrice_low(), ohlcList.get(i).getPrice_close());
+        }
+    }
+
+    private void getOhlc(boolean isWeek) {
+        long monthSeconds = 30 * 24 * 60 * 60;
+        long weekSeconds = 7 * 24 * 60 * 60;
         this.isLoading.set(true);
         progressBar.setVisibility(View.VISIBLE);
-        String lastWeek = "https://rest.coinapi.io/v1/ohlcv/BITSTAMP_SPOT_BTC_USD/history?period_id=" + "1MIN" + "&time_start=" + "2016-01-01T00:00:00";
-        String lastMonth = "https://rest.coinapi.io/v1/ohlcv/BITSTAMP_SPOT_BTC_USD/history?period_id=" + "1MIN" + "&time_start=" + "2016-01-01T00:00:00";
-        threadPoolExecutor.execute(new OhlcApiHandler(lastMonth) {
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        Date date = new Date();
+        if (isWeek) {
+            date.setTime(System.currentTimeMillis() - weekSeconds * 1000);
+
+        } else {
+            date.setTime(System.currentTimeMillis() - monthSeconds * 1000);
+        }
+
+
+        String url = "https://rest.coinapi.io/v1/ohlcv/BITSTAMP_SPOT_BTC_USD/history?period_id=" +
+                "1MIN" + "&time_start=" +
+                formatter.format(date.getTime()).replace(" ", "T");
+        threadPoolExecutor.execute(new OhlcApiHandler(url) {
             @Override
             void requestCallback(BufferedSource response) throws IOException {
                 final Moshi moshi = new Moshi.Builder().build();
@@ -121,8 +183,9 @@ public class CoinFragment extends Fragment {
                     @Override
                     void callback() {
                         OHLC[] ohlcs = jsonResponse;
+                        ohlcList.clear();
                         ohlcList.addAll(Arrays.asList(ohlcs));
-                        initSciChart();
+                        appendPoints();
                         progressBar.setVisibility(View.GONE);
 //                        saveCryptoCurrenciesToCache();
                     }
@@ -131,17 +194,5 @@ public class CoinFragment extends Fragment {
             }
         });
     }
-
-
-    private List<OHLC> getOhlcData(boolean isLastWeek) {
-        List<OHLC> list = new ArrayList();
-
-
-
-
-        return list;
-
-    }
-
 
 }
