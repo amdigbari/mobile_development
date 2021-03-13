@@ -8,6 +8,7 @@ import android.widget.Button;
 import android.widget.Toast;
 
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentTransaction;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
@@ -56,6 +57,12 @@ public class ItemsListFragment extends Fragment implements SwipeRefreshLayout.On
         LinearLayoutManager mLayoutManager = new LinearLayoutManager(view.getContext());
         this.mRecyclerView.setLayoutManager(mLayoutManager);
         this.mItemsListViewAdaptor = new ItemsListViewAdaptor(cryptoCurrencies, position -> {
+
+            FragmentTransaction ft = requireActivity().getSupportFragmentManager().beginTransaction();
+            ft.setCustomAnimations(R.anim.fade_in, R.anim.fade_out, R.anim.fade_in, R.anim.fade_out);
+            ft.replace(R.id.main_page, new CoinFragment(mItemsListViewAdaptor.getItem(position), threadPoolExecutor)).addToBackStack(null);
+            ft.commit();
+
             Toast.makeText(getContext(), position + " ", Toast.LENGTH_SHORT).show();
 
             getCryptoCurrencies(this.pageNumber.get(), false);
@@ -78,12 +85,15 @@ public class ItemsListFragment extends Fragment implements SwipeRefreshLayout.On
     }
 
     private void getCryptoCurrenciesFromCache() {
-        threadPoolExecutor.execute(new CacheTread(this.getContext()) {
+        threadPoolExecutor.execute(new CacheTread(this.getContext(), "crypto_currencies.json") {
             @Override
             void readFromFileCallback(CryptoCurrency[] cryptoCurrencies) {
                 cacheCryptoCurrencies.addAll(Arrays.asList(cryptoCurrencies));
                 mergeCryptoCurrencies();
             }
+
+            @Override
+            void readFromFileCallback(OHLC[] ohlcs, boolean isWeek) {}
         });
     }
 
@@ -92,13 +102,13 @@ public class ItemsListFragment extends Fragment implements SwipeRefreshLayout.On
         if (apiCryptoCurrencies.size() > 0) {
             cryptoCurrencies.clear();
             for (CryptoCurrency cryptoCurrency : apiCryptoCurrencies) {
-                cryptoCurrencyMap.put(cryptoCurrency.symbol, cryptoCurrency);
+                cryptoCurrencyMap.put(cryptoCurrency.getSymbol(), cryptoCurrency);
             }
         } else if (cacheCryptoCurrencies.size() > 0) {
             cryptoCurrencies.clear();
             Map<String, CryptoCurrency> cacheCryptoCurrencyMap = new LinkedHashMap<>();
             for (CryptoCurrency cryptoCurrency : cacheCryptoCurrencies) {
-                cacheCryptoCurrencyMap.put(cryptoCurrency.symbol, cryptoCurrency);
+                cacheCryptoCurrencyMap.put(cryptoCurrency.getSymbol(), cryptoCurrency);
             }
             cryptoCurrencyMap.putAll(cacheCryptoCurrencyMap);
         }
@@ -106,7 +116,10 @@ public class ItemsListFragment extends Fragment implements SwipeRefreshLayout.On
 
         cryptoCurrencies.clear();
         cryptoCurrencies.addAll(cryptoCurrencyMap.values());
-        this.mItemsListViewAdaptor.notifyDataSetChanged();
+        try {
+            this.mItemsListViewAdaptor.notifyDataSetChanged();
+        } catch (Exception ignored) {
+        }
     }
 
     private void getCryptoCurrencies(int page, boolean clear) {
@@ -175,10 +188,13 @@ public class ItemsListFragment extends Fragment implements SwipeRefreshLayout.On
     }
 
     private void saveCryptoCurrenciesToCache() {
-        threadPoolExecutor.execute(new CacheTread(this.getContext(), this.cryptoCurrencies) {
+        threadPoolExecutor.execute(new CacheTread(this.getContext(), this.cryptoCurrencies, "crypto_currencies.json") {
             @Override
             void readFromFileCallback(CryptoCurrency[] cryptoCurrencies) {
             }
+
+            @Override
+            void readFromFileCallback(OHLC[] ohlcs, boolean isWeek) {}
         });
     }
 
