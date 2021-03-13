@@ -4,14 +4,12 @@ import android.os.Bundle;
 
 import androidx.fragment.app.Fragment;
 
-import android.os.Handler;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.DecelerateInterpolator;
 import android.widget.Button;
 import android.widget.ProgressBar;
-import android.widget.Toast;
 
 import com.scichart.charting.model.dataSeries.IOhlcDataSeries;
 import com.scichart.charting.model.dataSeries.OhlcDataSeries;
@@ -27,17 +25,13 @@ import com.squareup.moshi.Moshi;
 import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import okio.BufferedSource;
 
@@ -50,7 +44,7 @@ public class CoinFragment extends Fragment {
     Button btnLastWeek, btnLastMonth;
     public AtomicBoolean isLoading = new AtomicBoolean(false);
     public AtomicBoolean isEnded = new AtomicBoolean(false);
-    public List<OHLC> ohlcList = new ArrayList<>();
+    public ArrayList<OHLC> ohlcList = new ArrayList<>();
 
     IOhlcDataSeries<Date, Double> dataSeries = new OhlcDataSeries<>(Date.class, Double.class);
 
@@ -187,7 +181,7 @@ public class CoinFragment extends Fragment {
                         ohlcList.addAll(Arrays.asList(ohlcs));
                         appendPoints();
                         progressBar.setVisibility(View.GONE);
-//                        saveCryptoCurrenciesToCache();
+                        saveOhlcsCurrenciesToCache();
                     }
                 };
                 threadPoolExecutor.execute(uiHandler);
@@ -195,4 +189,12 @@ public class CoinFragment extends Fragment {
         });
     }
 
+    private void saveOhlcsCurrenciesToCache() {
+        OhlcCacheTread cacheTread = new OhlcCacheTread(getContext(), ohlcList) {
+            @Override
+            void readFromFileCallback(OHLC[] ohlcs) {
+            }
+        };
+        threadPoolExecutor.execute(cacheTread);
+    }
 }
