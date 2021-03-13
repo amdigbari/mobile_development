@@ -31,8 +31,10 @@ public abstract class CryptoCurrenciesAPIHandler extends Thread {
             }
         } catch (Exception e1) {
             e1.printStackTrace();
+            requestCatchCallback();
         }
     }
 
     abstract void requestCallback(String response) throws IOException;
+    abstract void requestCatchCallback();
 }

@@ -126,6 +126,11 @@ public class ItemsListFragment extends Fragment implements SwipeRefreshLayout.On
                     getCryptoCurrenciesCallback(response);
                     pageNumber.set(page + 1);
                 }
+
+                @Override
+                void requestCatchCallback() {
+                    getCryptoCurrenciesCatchCallback();
+                }
             });
         }
     }
@@ -150,6 +155,11 @@ public class ItemsListFragment extends Fragment implements SwipeRefreshLayout.On
             e.printStackTrace();
         }
         swipeRefreshLayout.setRefreshing(false);
+    }
+
+    private void getCryptoCurrenciesCatchCallback() {
+        this.isLoading.set(false);
+        this.swipeRefreshLayout.setRefreshing(false);
     }
 
     private void initializeData() {
