@@ -69,9 +69,9 @@ public class ItemsListViewAdaptor extends RecyclerView.Adapter<ItemsListViewAdap
 
         holder.itemNameText.setText(item.getSymbol() + " | " + item.getName());
         holder.itemPriceText.setText(item.getQuote().getUSD().getPrice().toString() + "$");
-        showItemPercent(holder.itemDayDifference, item.getQuote().getUSD().getPercent_change_24h(), "1h");
-        showItemPercent(holder.itemWeekDifference, item.getQuote().getUSD().getPercent_change_7d(), "24h");
-        showItemPercent(holder.itemMonthDifference, item.getQuote().getUSD().getPercent_change_30d(), "7d");
+        showItemPercent(holder.itemHourDifference, item.getQuote().getUSD().getPercent_change_1h(), "1h");
+        showItemPercent(holder.itemDayDifference, item.getQuote().getUSD().getPercent_change_24h(), "24h");
+        showItemPercent(holder.itemWeekDifference, item.getQuote().getUSD().getPercent_change_7d(), "7d");
         holder.itemView.setOnClickListener(v -> callBack.onItemClicked(position));
         showImage("https://s2.coinmarketcap.com/static/img/coins/64x64/" + item.getId() + ".png", holder.itemAvatar);
     }

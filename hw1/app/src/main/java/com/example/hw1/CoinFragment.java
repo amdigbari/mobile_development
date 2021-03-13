@@ -1,5 +1,6 @@
 package com.example.hw1;
 
+import android.annotation.SuppressLint;
 import android.os.Bundle;
 
 import androidx.fragment.app.Fragment;
@@ -29,7 +30,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
-import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -43,12 +43,11 @@ public class CoinFragment extends Fragment {
     public ProgressBar progressBar;
     Button btnLastWeek, btnLastMonth;
     public AtomicBoolean isLoading = new AtomicBoolean(false);
-    public AtomicBoolean isEnded = new AtomicBoolean(false);
     public ArrayList<OHLC> ohlcList = new ArrayList<>();
 
     IOhlcDataSeries<Date, Double> dataSeries = new OhlcDataSeries<>(Date.class, Double.class);
 
-    boolean isWeek  = true;
+    boolean isWeek = true;
 
 
     public CoinFragment(CryptoCurrency cryptoCurrency, ExecutorService threadPoolExecutor) {
@@ -84,14 +83,43 @@ public class CoinFragment extends Fragment {
 
         initSciChart();
 
-
-
-
+        getOHLCsFromCache();
         getOhlc(isWeek);
 
         return view;
 
 
+    }
+
+    private void getOHLCsFromCache() {
+        threadPoolExecutor.execute(new CacheTread(this.getContext(), "ohlc_" + cryptoCurrency.getId() + ".json", true) {
+            @Override
+            void readFromFileCallback(CryptoCurrency[] cryptoCurrencies) {
+            }
+
+            @Override
+            void readFromFileCallback(OHLC[] ohlcs, boolean week) {
+                if (ohlcList.isEmpty()) {
+                    isWeek = week;
+                    ohlcList.addAll(Arrays.asList(ohlcs));
+                    if (isWeek) {
+                        btnLastMonth.setBackgroundColor(getResources().getColor(R.color.white));
+                        btnLastWeek.setBackgroundColor(getResources().getColor(R.color.carbon_green_600));
+                    } else {
+                        btnLastMonth.setBackgroundColor(getResources().getColor(R.color.carbon_green_600));
+                        btnLastWeek.setBackgroundColor(getResources().getColor(R.color.white));
+                    }
+                    threadPoolExecutor.execute(new UIHandler() {
+                        @Override
+                        void callback() {
+                            appendPoints();
+                            progressBar.setVisibility(View.GONE);
+
+                        }
+                    });
+                }
+            }
+        });
     }
 
     private void initSciChart() {
@@ -115,9 +143,6 @@ public class CoinFragment extends Fragment {
         surface.zoomExtentsX();
         surface.zoomExtentsY();
 
-//        yAxis.setAutoRange(AutoRange.Never);
-//        xAxis.setAutoRange(AutoRange.Never);
-
         UpdateSuspender.using(surface, () -> {
             Collections.addAll(surface.getXAxes(), xAxis);
             Collections.addAll(surface.getYAxes(), yAxis);
@@ -132,7 +157,7 @@ public class CoinFragment extends Fragment {
     private void appendPoints() {
         for (int i = 0; i < ohlcList.size(); i++) {
             String[] strings = ohlcList.get(i).getTime_period_start().split("T");
-            SimpleDateFormat formatter2 = new SimpleDateFormat("yyyy-MM-dd");
+            @SuppressLint("SimpleDateFormat") SimpleDateFormat formatter2 = new SimpleDateFormat("yyyy-MM-dd");
             Date date2 = null;
             try {
                 date2 = formatter2.parse(strings[0]);
@@ -149,7 +174,7 @@ public class CoinFragment extends Fragment {
         long weekSeconds = 7 * 24 * 60 * 60;
         this.isLoading.set(true);
         progressBar.setVisibility(View.VISIBLE);
-        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        @SuppressLint("SimpleDateFormat") SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         Date date = new Date();
         if (isWeek) {
             date.setTime(System.currentTimeMillis() - weekSeconds * 1000);
@@ -174,28 +199,36 @@ public class CoinFragment extends Fragment {
 
                 isLoading.set(false);
 
+                ohlcList.clear();
+                ohlcList.addAll(Arrays.asList(jsonResponse));
                 UIHandler uiHandler = new UIHandler() {
                     @Override
                     void callback() {
-                        OHLC[] ohlcs = jsonResponse;
-                        ohlcList.clear();
-                        ohlcList.addAll(Arrays.asList(ohlcs));
                         appendPoints();
                         progressBar.setVisibility(View.GONE);
-                        saveOhlcsCurrenciesToCache();
                     }
                 };
                 threadPoolExecutor.execute(uiHandler);
+
+                saveOhlcsCurrenciesToCache();
             }
         });
     }
 
     private void saveOhlcsCurrenciesToCache() {
-        OhlcCacheTread cacheTread = new OhlcCacheTread(getContext(), ohlcList) {
+        threadPoolExecutor.execute(new CacheTread(this.ohlcList, this.getContext(), "ohlc_" + cryptoCurrency.getId() + ".json", this.isWeek) {
             @Override
-            void readFromFileCallback(OHLC[] ohlcs) {
+            void readFromFileCallback(CryptoCurrency[] cryptoCurrencies) {
             }
-        };
-        threadPoolExecutor.execute(cacheTread);
+
+            @Override
+            void readFromFileCallback(OHLC[] ohlcs, boolean isWeek) {
+            }
+        });
+    }
+
+    public static class CacheResult {
+        public boolean isWeek;
+        public OHLC[] ohlcs;
     }
 }

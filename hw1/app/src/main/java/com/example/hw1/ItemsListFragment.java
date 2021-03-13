@@ -63,10 +63,6 @@ public class ItemsListFragment extends Fragment implements SwipeRefreshLayout.On
             ft.replace(R.id.main_page, new CoinFragment(mItemsListViewAdaptor.getItem(position), threadPoolExecutor)).addToBackStack(null);
             ft.commit();
 
-//            if (!isLoading.get()) {
-//                isLoading.set(true);
-//                getCryptoCurrencies(this.pageNumber.get());
-//            }
             Toast.makeText(getContext(), position + " ", Toast.LENGTH_SHORT).show();
 
             getCryptoCurrencies(this.pageNumber.get(), false);
@@ -89,12 +85,15 @@ public class ItemsListFragment extends Fragment implements SwipeRefreshLayout.On
     }
 
     private void getCryptoCurrenciesFromCache() {
-        threadPoolExecutor.execute(new CacheTread(this.getContext()) {
+        threadPoolExecutor.execute(new CacheTread(this.getContext(), "crypto_currencies.json") {
             @Override
             void readFromFileCallback(CryptoCurrency[] cryptoCurrencies) {
                 cacheCryptoCurrencies.addAll(Arrays.asList(cryptoCurrencies));
                 mergeCryptoCurrencies();
             }
+
+            @Override
+            void readFromFileCallback(OHLC[] ohlcs, boolean isWeek) {}
         });
     }
 
@@ -103,13 +102,13 @@ public class ItemsListFragment extends Fragment implements SwipeRefreshLayout.On
         if (apiCryptoCurrencies.size() > 0) {
             cryptoCurrencies.clear();
             for (CryptoCurrency cryptoCurrency : apiCryptoCurrencies) {
-                cryptoCurrencyMap.put(cryptoCurrency.symbol, cryptoCurrency);
+                cryptoCurrencyMap.put(cryptoCurrency.getSymbol(), cryptoCurrency);
             }
         } else if (cacheCryptoCurrencies.size() > 0) {
             cryptoCurrencies.clear();
             Map<String, CryptoCurrency> cacheCryptoCurrencyMap = new LinkedHashMap<>();
             for (CryptoCurrency cryptoCurrency : cacheCryptoCurrencies) {
-                cacheCryptoCurrencyMap.put(cryptoCurrency.symbol, cryptoCurrency);
+                cacheCryptoCurrencyMap.put(cryptoCurrency.getSymbol(), cryptoCurrency);
             }
             cryptoCurrencyMap.putAll(cacheCryptoCurrencyMap);
         }
@@ -119,7 +118,7 @@ public class ItemsListFragment extends Fragment implements SwipeRefreshLayout.On
         cryptoCurrencies.addAll(cryptoCurrencyMap.values());
         try {
             this.mItemsListViewAdaptor.notifyDataSetChanged();
-        } catch (Exception e) {
+        } catch (Exception ignored) {
         }
     }
 
@@ -147,10 +146,6 @@ public class ItemsListFragment extends Fragment implements SwipeRefreshLayout.On
                 }
             });
         }
-    }
-
-    private void getOHLC(int pageNumber) {
-
     }
 
     private void getCryptoCurrenciesCallback(String response) {
@@ -193,10 +188,13 @@ public class ItemsListFragment extends Fragment implements SwipeRefreshLayout.On
     }
 
     private void saveCryptoCurrenciesToCache() {
-        threadPoolExecutor.execute(new CacheTread(this.getContext(), this.cryptoCurrencies) {
+        threadPoolExecutor.execute(new CacheTread(this.getContext(), this.cryptoCurrencies, "crypto_currencies.json") {
             @Override
             void readFromFileCallback(CryptoCurrency[] cryptoCurrencies) {
             }
+
+            @Override
+            void readFromFileCallback(OHLC[] ohlcs, boolean isWeek) {}
         });
     }
 

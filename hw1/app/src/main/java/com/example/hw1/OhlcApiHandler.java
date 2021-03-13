@@ -22,7 +22,7 @@ public abstract class OhlcApiHandler extends Thread {
     public void run() {
         Request request = new Request.Builder()
                 .url(this.url)
-                .addHeader("X-CoinAPI-Key", "932E2F14-F512-4E10-B3AB-D35AAA5E8DC5")
+                .addHeader("X-CoinAPI-Key", "DA0D48B4-6C80-467B-9C3C-B6C75DCA574F")
                 .build();
 
         try {
