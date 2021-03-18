@@ -33,10 +33,11 @@ public abstract class OhlcApiHandler extends Thread {
             }
         } catch (Exception e1) {
             e1.printStackTrace();
+            requestCatchCallback();
         }
     }
 
 
     abstract void requestCallback(BufferedSource response) throws IOException;
-
+    abstract void requestCatchCallback();
 }

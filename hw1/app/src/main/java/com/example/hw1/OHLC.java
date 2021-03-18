@@ -102,9 +102,4 @@ public class OHLC {
     public void setTrades_count(String trades_count) {
         this.trades_count = trades_count;
     }
-
-    static class OHLCListResponse {
-        OHLC[] data;
-    }
-
 }

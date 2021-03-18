@@ -91,9 +91,6 @@ public class ItemsListFragment extends Fragment implements SwipeRefreshLayout.On
                 cacheCryptoCurrencies.addAll(Arrays.asList(cryptoCurrencies));
                 mergeCryptoCurrencies();
             }
-
-            @Override
-            void readFromFileCallback(OHLC[] ohlcs, boolean isWeek) {}
         });
     }
 
@@ -123,7 +120,7 @@ public class ItemsListFragment extends Fragment implements SwipeRefreshLayout.On
     }
 
     private void getCryptoCurrencies(int page, boolean clear) {
-        if (!this.isLoading.get()) {
+        if (!this.isLoading.get() && Utils.isNetworkConnected(Objects.requireNonNull(getContext()))) {
             int itemPerRequest = 10;
             this.isLoading.set(true);
             final int startItem = (page - 1) * itemPerRequest + 1;
@@ -145,6 +142,8 @@ public class ItemsListFragment extends Fragment implements SwipeRefreshLayout.On
                     getCryptoCurrenciesCatchCallback();
                 }
             });
+        } else {
+            getCryptoCurrenciesCatchCallback();
         }
     }
 
@@ -173,6 +172,12 @@ public class ItemsListFragment extends Fragment implements SwipeRefreshLayout.On
     private void getCryptoCurrenciesCatchCallback() {
         this.isLoading.set(false);
         this.swipeRefreshLayout.setRefreshing(false);
+        threadPoolExecutor.execute(new UIHandler() {
+            @Override
+            void callback() {
+                Toast.makeText(getContext(), "There is a problem. Please try again later.", Toast.LENGTH_LONG).show();
+            }
+        });
     }
 
     private void initializeData() {
@@ -192,9 +197,6 @@ public class ItemsListFragment extends Fragment implements SwipeRefreshLayout.On
             @Override
             void readFromFileCallback(CryptoCurrency[] cryptoCurrencies) {
             }
-
-            @Override
-            void readFromFileCallback(OHLC[] ohlcs, boolean isWeek) {}
         });
     }
 

@@ -27,11 +27,8 @@ import static com.google.android.material.internal.ContextUtils.getActivity;
 public abstract class CacheTread extends Thread {
     private final boolean isWrite;
     private ArrayList<CryptoCurrency> cryptoCurrencies;
-    private ArrayList<OHLC> ohlcs;
-    private final boolean readOHLC;
     private final Context context;
     private final String filename;
-    private boolean isWeek;
 
     public CacheTread(Context context, ArrayList<CryptoCurrency> cryptoCurrencies, String filename) {
         super();
@@ -39,27 +36,9 @@ public abstract class CacheTread extends Thread {
         this.isWrite = true;
         this.cryptoCurrencies = cryptoCurrencies;
         this.filename = filename;
-        this.readOHLC = false;
     }
 
     public CacheTread(Context context, String filename) {
-        this.context = context;
-        this.isWrite = false;
-        this.filename = filename;
-        this.readOHLC = false;
-    }
-
-    public CacheTread(ArrayList<OHLC> ohlcs, Context context, String filename, boolean isWeek) {
-        this.ohlcs = ohlcs;
-        this.readOHLC = true;
-        this.context = context;
-        this.filename = filename;
-        this.isWrite = true;
-        this.isWeek = isWeek;
-    }
-
-    public CacheTread(Context context, String filename, boolean readOHLC) {
-        this.readOHLC = readOHLC;
         this.context = context;
         this.filename = filename;
         this.isWrite = false;
@@ -68,17 +47,9 @@ public abstract class CacheTread extends Thread {
     @Override
     public void run() {
         if (this.isWrite) {
-            if (this.readOHLC) {
-                writeToOHLCFile();
-            } else {
-                writeToFile();
-            }
+            writeToFile();
         } else {
-            if (this.readOHLC) {
-                readFromOHLCFile();
-            } else {
-                readFromFile();
-            }
+            readFromFile();
         }
     }
 
@@ -99,28 +70,6 @@ public abstract class CacheTread extends Thread {
         }
     }
 
-    private void writeToOHLCFile() {
-        try {
-            JSONArray jsonArray = new JSONArray();
-            for (OHLC ohlc : ohlcs) {
-                jsonArray.put(getOHLC(ohlc));
-            }
-
-            JSONObject jsonObject = new JSONObject();
-            jsonObject.put("isWeek", this.isWeek);
-            jsonObject.put("data", jsonArray.toString());
-            ObjectOutput out = new ObjectOutputStream(new FileOutputStream
-                    (new File(context.getCacheDir() + File.separator + this.filename, "")));
-            synchronized (CacheTread.class) {
-                out.writeObject(jsonObject.toString());
-                out.close();
-            }
-
-        } catch (IOException | JSONException | RuntimeException e) {
-            e.printStackTrace();
-        }
-    }
-
     private void readFromFile() {
         try {
             @SuppressLint("RestrictedApi") ObjectInputStream in = new ObjectInputStream(new FileInputStream
@@ -129,18 +78,6 @@ public abstract class CacheTread extends Thread {
             readFromFileCallback(cryptoCurrencies);
             in.close();
         } catch (ClassNotFoundException | IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void readFromOHLCFile() {
-        try {
-            @SuppressLint("RestrictedApi") ObjectInputStream in = new ObjectInputStream(new FileInputStream
-                    (new File(Objects.requireNonNull(getActivity(this.context)).getCacheDir() + File.separator + this.filename)));
-            CoinFragment.CacheResult result = new Gson().fromJson((String) in.readObject(), CoinFragment.CacheResult.class);
-            readFromFileCallback(result.ohlcs, result.isWeek);
-            in.close();
-        } catch (ClassNotFoundException | IOException | NullPointerException e) {
             e.printStackTrace();
         }
     }
@@ -161,24 +98,5 @@ public abstract class CacheTread extends Thread {
         return jsonObject;
     }
 
-    private JSONObject getOHLC(OHLC ohlc) throws JSONException {
-        JSONObject jsonObject = new JSONObject();
-
-        jsonObject.put("price_open", ohlc.getPrice_open());
-        jsonObject.put("price_close", ohlc.getPrice_close());
-        jsonObject.put("price_high", ohlc.getPrice_high());
-        jsonObject.put("price_low", ohlc.getPrice_low());
-        jsonObject.put("time_period_start", ohlc.getTime_period_start());
-        jsonObject.put("time_period_end", ohlc.getTime_period_end());
-        jsonObject.put("time_open", ohlc.getTime_open());
-        jsonObject.put("time_close", ohlc.getTime_close());
-        jsonObject.put("volume_traded", ohlc.getVolume_traded());
-        jsonObject.put("trades_count", ohlc.getTrades_count());
-
-        return jsonObject;
-    }
-
     abstract void readFromFileCallback(CryptoCurrency[] cryptoCurrencies);
-
-    abstract void readFromFileCallback(OHLC[] ohlcs, boolean isWeek);
 }

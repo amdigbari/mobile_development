@@ -11,6 +11,7 @@ import android.view.ViewGroup;
 import android.view.animation.DecelerateInterpolator;
 import android.widget.Button;
 import android.widget.ProgressBar;
+import android.widget.Toast;
 
 import com.scichart.charting.model.dataSeries.IOhlcDataSeries;
 import com.scichart.charting.model.dataSeries.OhlcDataSeries;
@@ -30,6 +31,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -82,44 +84,11 @@ public class CoinFragment extends Fragment {
         });
 
         initSciChart();
-
-        getOHLCsFromCache();
         getOhlc(isWeek);
 
         return view;
 
 
-    }
-
-    private void getOHLCsFromCache() {
-        threadPoolExecutor.execute(new CacheTread(this.getContext(), "ohlc_" + cryptoCurrency.getId() + ".json", true) {
-            @Override
-            void readFromFileCallback(CryptoCurrency[] cryptoCurrencies) {
-            }
-
-            @Override
-            void readFromFileCallback(OHLC[] ohlcs, boolean week) {
-                if (ohlcList.isEmpty()) {
-                    isWeek = week;
-                    ohlcList.addAll(Arrays.asList(ohlcs));
-                    if (isWeek) {
-                        btnLastMonth.setBackgroundColor(getResources().getColor(R.color.white));
-                        btnLastWeek.setBackgroundColor(getResources().getColor(R.color.carbon_green_600));
-                    } else {
-                        btnLastMonth.setBackgroundColor(getResources().getColor(R.color.carbon_green_600));
-                        btnLastWeek.setBackgroundColor(getResources().getColor(R.color.white));
-                    }
-                    threadPoolExecutor.execute(new UIHandler() {
-                        @Override
-                        void callback() {
-                            appendPoints();
-                            progressBar.setVisibility(View.GONE);
-
-                        }
-                    });
-                }
-            }
-        });
     }
 
     private void initSciChart() {
@@ -170,65 +139,65 @@ public class CoinFragment extends Fragment {
     }
 
     private void getOhlc(boolean isWeek) {
-        long monthSeconds = 30 * 24 * 60 * 60;
-        long weekSeconds = 7 * 24 * 60 * 60;
-        this.isLoading.set(true);
-        progressBar.setVisibility(View.VISIBLE);
-        @SuppressLint("SimpleDateFormat") SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        Date date = new Date();
-        if (isWeek) {
-            date.setTime(System.currentTimeMillis() - weekSeconds * 1000);
+        if (Utils.isNetworkConnected(Objects.requireNonNull(getContext()))) {
+            long monthSeconds = 30 * 24 * 60 * 60;
+            long weekSeconds = 7 * 24 * 60 * 60;
+            this.isLoading.set(true);
+            progressBar.setVisibility(View.VISIBLE);
+            @SuppressLint("SimpleDateFormat") SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            Date date = new Date();
+            if (isWeek) {
+                date.setTime(System.currentTimeMillis() - weekSeconds * 1000);
 
+            } else {
+                date.setTime(System.currentTimeMillis() - monthSeconds * 1000);
+            }
+
+
+            String url = "https://rest.coinapi.io/v1/ohlcv/BITSTAMP_SPOT_BTC_USD/history?period_id=" +
+                    "1MIN" + "&time_start=" +
+                    formatter.format(date.getTime()).replace(" ", "T") +
+                    "&symbol_id=" + cryptoCurrency.getSymbol();
+            threadPoolExecutor.execute(new OhlcApiHandler(url) {
+                @Override
+                void requestCallback(BufferedSource response) throws IOException {
+                    final Moshi moshi = new Moshi.Builder().build();
+                    final JsonAdapter<OHLC[]> cryptoResponseJsonAdapter = moshi.adapter(OHLC[].class);
+                    OHLC[] jsonResponse = cryptoResponseJsonAdapter.fromJson(response);
+
+                    assert jsonResponse != null;
+
+                    isLoading.set(false);
+
+                    ohlcList.clear();
+                    ohlcList.addAll(Arrays.asList(jsonResponse));
+                    threadPoolExecutor.execute(new UIHandler() {
+                        @Override
+                        void callback() {
+                            appendPoints();
+                            progressBar.setVisibility(View.GONE);
+                        }
+                    });
+                }
+
+                @Override
+                void requestCatchCallback() {
+                    getOHLCsCatchCallback();
+                }
+            });
         } else {
-            date.setTime(System.currentTimeMillis() - monthSeconds * 1000);
+            getOHLCsCatchCallback();
         }
-
-
-        String url = "https://rest.coinapi.io/v1/ohlcv/BITSTAMP_SPOT_BTC_USD/history?period_id=" +
-                "1MIN" + "&time_start=" +
-                formatter.format(date.getTime()).replace(" ", "T") +
-                "&symbol_id=" + cryptoCurrency.getSymbol();
-        threadPoolExecutor.execute(new OhlcApiHandler(url) {
-            @Override
-            void requestCallback(BufferedSource response) throws IOException {
-                final Moshi moshi = new Moshi.Builder().build();
-                final JsonAdapter<OHLC[]> cryptoResponseJsonAdapter = moshi.adapter(OHLC[].class);
-                OHLC[] jsonResponse = cryptoResponseJsonAdapter.fromJson(response);
-
-                assert jsonResponse != null;
-
-                isLoading.set(false);
-
-                ohlcList.clear();
-                ohlcList.addAll(Arrays.asList(jsonResponse));
-                UIHandler uiHandler = new UIHandler() {
-                    @Override
-                    void callback() {
-                        appendPoints();
-                        progressBar.setVisibility(View.GONE);
-                    }
-                };
-                threadPoolExecutor.execute(uiHandler);
-
-                saveOhlcsCurrenciesToCache();
-            }
-        });
     }
 
-    private void saveOhlcsCurrenciesToCache() {
-        threadPoolExecutor.execute(new CacheTread(this.ohlcList, this.getContext(), "ohlc_" + cryptoCurrency.getId() + ".json", this.isWeek) {
+    private void getOHLCsCatchCallback() {
+        isLoading.set(false);
+        progressBar.setVisibility(View.GONE);
+        threadPoolExecutor.execute(new UIHandler() {
             @Override
-            void readFromFileCallback(CryptoCurrency[] cryptoCurrencies) {
-            }
-
-            @Override
-            void readFromFileCallback(OHLC[] ohlcs, boolean isWeek) {
+            void callback() {
+                Toast.makeText(getContext(), "There is a problem. Please try again later.", Toast.LENGTH_LONG).show();
             }
         });
-    }
-
-    public static class CacheResult {
-        public boolean isWeek;
-        public OHLC[] ohlcs;
     }
 }
