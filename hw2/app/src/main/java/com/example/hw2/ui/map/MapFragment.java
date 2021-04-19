@@ -1,7 +1,6 @@
 package com.example.hw2.ui.map;
 
 import android.content.Context;
-import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -19,6 +18,7 @@ import com.mapbox.android.core.permissions.PermissionsListener;
 import com.mapbox.android.core.permissions.PermissionsManager;
 import com.mapbox.mapboxsdk.Mapbox;
 import com.mapbox.mapboxsdk.annotations.IconFactory;
+import com.mapbox.mapboxsdk.annotations.Marker;
 import com.mapbox.mapboxsdk.annotations.MarkerOptions;
 import com.mapbox.mapboxsdk.camera.CameraPosition;
 import com.mapbox.mapboxsdk.geometry.LatLng;
@@ -36,10 +36,11 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, Permiss
     private MapView mapView;
     private PermissionsManager permissionsManager;
     private MapboxMap mapboxMap;
+    private Marker userMarker;
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
-        Mapbox.getInstance(this.getContext(), getString(R.string.mapbox_access_token));
+        Mapbox.getInstance(this.requireContext(), getString(R.string.mapbox_access_token));
 
         View root = inflater.inflate(R.layout.fragment_map, container, false);
 
@@ -58,6 +59,12 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, Permiss
     public void onMapReady(@NonNull final MapboxMap mapboxMap) {
         this.mapboxMap = mapboxMap;
 
+        this.mapboxMap.addOnMapLongClickListener(point -> {
+            System.out.println("Long Tap");
+            // TODO: show modal and store data to database
+            return false;
+        });
+
         mapboxMap.setStyle(new Style.Builder().fromUri("mapbox://styles/mapbox/streets-v11"),
                 this::getUserLocation);
     }
@@ -65,13 +72,11 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, Permiss
     @SuppressWarnings({"MissingPermission"})
     private void getUserLocation(@NonNull Style loadedMapStyle) {
         // Check if permissions are enabled and if not request
-        if (PermissionsManager.areLocationPermissionsGranted(this.getContext())) {
-            LocationManager lm = (LocationManager) this.getActivity().getSystemService(Context.LOCATION_SERVICE);
+        if (PermissionsManager.areLocationPermissionsGranted(this.requireContext())) {
+            LocationManager lm = (LocationManager) this.requireActivity().getSystemService(Context.LOCATION_SERVICE);
             LocationListener locationListener = new LocationListener() {
                 public void onLocationChanged(Location location) {
-                    LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
-                    mapboxMap.setCameraPosition(new CameraPosition.Builder().target(latLng).zoom(16).build());
-                    mapboxMap.addMarker(new MarkerOptions().position(latLng).icon(IconFactory.getInstance(getActivity()).fromResource(R.drawable.black_marker)));
+                    showUserNewMarker(new LatLng(location.getLatitude(), location.getLongitude()));
                 }
 
                 @Override
@@ -86,11 +91,20 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, Permiss
                 public void onProviderDisabled(String provider) {
                 }
             };
+            assert lm != null;
             lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 2000, 100, locationListener);
         } else {
             permissionsManager = new PermissionsManager(this);
             permissionsManager.requestLocationPermissions(this.getActivity());
         }
+    }
+
+    private void showUserNewMarker(LatLng latLng) {
+        if (this.userMarker != null) {
+            this.mapboxMap.removeMarker(this.userMarker);
+        }
+        this.mapboxMap.setCameraPosition(new CameraPosition.Builder().target(latLng).zoom(16).build());
+        this.userMarker = this.mapboxMap.addMarker(new MarkerOptions().position(latLng).icon(IconFactory.getInstance(requireActivity()).fromResource(R.drawable.black_marker)));
     }
 
     @Override
