@@ -1,0 +1,99 @@
+apply plugin: 'com.android.library'
+apply plugin: "com.jaredsburrows.license"
+apply plugin: 'kotlin-android'
+apply plugin: 'com.mapbox.android.sdk.versions'
+
+dependencies {
+    lintChecks project(":MapboxGLAndroidSDKLint")
+    api dependenciesList.mapboxAndroidTelemetry
+    api dependenciesList.mapboxJavaGeoJSON
+    api dependenciesList.mapboxAndroidGestures
+    api dependenciesList.mapboxAndroidAccounts
+
+    if (!project.findProperty('buildFromSource')) {
+        api dependenciesList.mapboxSdkCore
+    } else {
+        api project(":MapboxGLAndroidSDKCore")
+    }
+    implementation dependenciesList.mapboxJavaTurf
+    implementation dependenciesList.supportAnnotations
+    implementation dependenciesList.supportFragmentV4
+    implementation dependenciesList.okhttp3
+    testImplementation dependenciesList.junit
+    testImplementation dependenciesList.mockito
+    testImplementation dependenciesList.mockk
+    testImplementation dependenciesList.robolectric
+    testImplementation dependenciesList.kotlinLib
+    testImplementation dependenciesList.commonsIO
+}
+
+android {
+    compileSdkVersion androidVersions.compileSdkVersion
+
+    defaultConfig {
+        minSdkVersion androidVersions.minSdkVersion
+        targetSdkVersion androidVersions.targetSdkVersion
+        buildConfigField "String", "GIT_REVISION_SHORT", String.format("\"%s\"", getGitRevision())
+        buildConfigField "String", "MAPBOX_SDK_IDENTIFIER", String.format("\"%s\"", "mapbox-maps-android")
+        buildConfigField "String", "MAPBOX_SDK_VERSION", String.format("\"%s\"", project.VERSION_NAME)
+        buildConfigField "String", "MAPBOX_VERSION_STRING", String.format("\"Mapbox/%s\"", project.VERSION_NAME)
+        buildConfigField "String", "MAPBOX_EVENTS_USER_AGENT", String.format("\"mapbox-maps-android/%s\"", project.VERSION_NAME)
+        consumerProguardFiles 'proguard-rules.pro'
+    }
+
+    // avoid naming conflicts, force usage of prefix
+    resourcePrefix 'mapbox_'
+
+    sourceSets {
+        // limit amount of exposed library resources
+        main.res.srcDirs += 'src/main/res-public'
+    }
+
+    lintOptions {
+        disable 'MissingTranslation', 'TypographyQuotes', 'ObsoleteLintCustomCheck', 'MissingPermission', 'WrongThreadInterprocedural'
+        checkAllWarnings true
+        warningsAsErrors false
+    }
+
+    testOptions {
+        unitTests {
+            returnDefaultValues true
+
+            // Roboelectric 4.0 required config
+            // http://robolectric.org/migrating/#migrating-to-40
+            includeAndroidResources = true
+        }
+    }
+
+    buildTypes {
+        debug {
+            jniDebuggable true
+        }
+    }
+}
+
+licenseReport {
+    generateHtmlReport = false
+    generateJsonReport = true
+    copyHtmlReportToAssets = false
+    copyJsonReportToAssets = false
+}
+
+def static getGitRevision() {
+    def cmd = "git rev-parse --short HEAD"
+    def proc = cmd.execute()
+    def ref = proc.text.trim()
+    return ref
+}
+
+configurations {
+    all*.exclude group: 'commons-logging', module: 'commons-logging'
+    all*.exclude group: 'commons-collections', module: 'commons-collections'
+}
+apply from: "${projectDir}/../gradle/gradle-javadoc.gradle"
+apply from: "${projectDir}/../gradle/gradle-checkstyle.gradle"
+apply from: "${projectDir}/../gradle/gradle-dependencies-graph.gradle"
+apply from: "${projectDir}/../gradle/gradle-update-vendor-modules.gradle"
+apply from: "${projectDir}/../gradle/android-nitpick.gradle"
+apply from: "${projectDir}/../gradle/gradle-sdk-registry.gradle"
+apply from: "${projectDir}/../gradle/jacoco-report.gradle"
