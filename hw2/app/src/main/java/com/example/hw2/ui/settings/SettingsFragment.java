@@ -1,6 +1,7 @@
 package com.example.hw2.ui.settings;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -11,10 +12,17 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.example.hw2.R;
+import com.example.hw2.repository.db.AppDatabase;
+
+import io.reactivex.Single;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.schedulers.Schedulers;
 
 public class SettingsFragment extends Fragment {
 
     private SettingsViewModel settingsViewModel;
+    private Disposable disposable;
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
@@ -23,6 +31,27 @@ public class SettingsFragment extends Fragment {
         View root = inflater.inflate(R.layout.fragment_settings, container, false);
         final TextView textView = root.findViewById(R.id.text_settings);
         settingsViewModel.getText().observe(getViewLifecycleOwner(), textView::setText);
+
+        readPlacesFromDb();
+
         return root;
+    }
+
+    private void readPlacesFromDb() {
+        disposable = Single.fromCallable(() -> AppDatabase.getInstance(getContext()).getAppDao().getAllPlaces())
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe((places, throwable) -> {
+                    for (int i = 0; i < places.size(); i++) {
+                        Log.d("DataBase", places.get(i).toString());
+                    }
+                });
+    }
+
+    @Override
+    public void onDestroy() {
+        if (disposable != null)
+            disposable.dispose();
+        super.onDestroy();
     }
 }
