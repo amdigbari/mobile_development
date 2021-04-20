@@ -1,6 +1,7 @@
 package com.example.hw2.ui.bookmarks;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -16,11 +17,13 @@ import com.example.hw2.repository.db.AppDatabase;
 
 import io.reactivex.Completable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.disposables.Disposable;
 import io.reactivex.schedulers.Schedulers;
 
 public class BookmarksFragment extends Fragment {
 
     private BookmarksViewModel bookmarksViewModel;
+    private Disposable disposable;
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
@@ -56,7 +59,7 @@ public class BookmarksFragment extends Fragment {
 
         AppDatabase database = AppDatabase.getInstance(getContext());
 
-        Completable.fromAction(() -> {
+        disposable = Completable.fromAction(() -> {
             database.getAppDao().deleteAllPlaces();
             database.getAppDao().insert(place1);
             database.getAppDao().insert(place2);
@@ -64,6 +67,13 @@ public class BookmarksFragment extends Fragment {
         })
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribe();
+                .subscribe(() -> Log.d("DataBase", "inserted successfully"));
+    }
+
+    @Override
+    public void onDestroy() {
+        if (disposable != null)
+            disposable.dispose();
+        super.onDestroy();
     }
 }

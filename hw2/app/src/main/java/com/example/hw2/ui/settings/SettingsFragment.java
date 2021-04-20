@@ -16,11 +16,13 @@ import com.example.hw2.repository.db.AppDatabase;
 
 import io.reactivex.Single;
 import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.disposables.Disposable;
 import io.reactivex.schedulers.Schedulers;
 
 public class SettingsFragment extends Fragment {
 
     private SettingsViewModel settingsViewModel;
+    private Disposable disposable;
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
@@ -36,13 +38,20 @@ public class SettingsFragment extends Fragment {
     }
 
     private void readPlacesFromDb() {
-        Single.fromCallable(() -> AppDatabase.getInstance(getContext()).getAppDao().getAllPlaces())
+        disposable = Single.fromCallable(() -> AppDatabase.getInstance(getContext()).getAppDao().getAllPlaces())
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe((places, throwable) -> {
                     for (int i = 0; i < places.size(); i++) {
-                        Log.d("myDataBasse", places.get(i).toString());
+                        Log.d("DataBase", places.get(i).toString());
                     }
                 });
+    }
+
+    @Override
+    public void onDestroy() {
+        if (disposable != null)
+            disposable.dispose();
+        super.onDestroy();
     }
 }
