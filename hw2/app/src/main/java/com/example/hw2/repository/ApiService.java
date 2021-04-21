@@ -10,10 +10,11 @@ import okhttp3.ResponseBody;
 import retrofit2.http.GET;
 import retrofit2.http.POST;
 import retrofit2.http.PartMap;
+import retrofit2.http.Path;
 import retrofit2.http.Query;
 
 public interface ApiService {
 
-    @POST("")
-    ResponseBody forwardGeocode(@Query("search") String search);
+    @GET("geocoding/v5/mapbox.places/{place}.json")
+    ResponseBody forwardGeocode(@Path("place") String place, @Query("access_token") String token);
 }

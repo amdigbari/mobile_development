@@ -3,6 +3,7 @@ package com.example.hw2.repository;
 import android.app.Application;
 import android.os.AsyncTask;
 
+import com.example.hw2.R;
 import com.example.hw2.model.Place;
 import com.example.hw2.repository.db.AppDao;
 import com.example.hw2.repository.db.AppDatabase;
@@ -18,12 +19,22 @@ import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
 public class AppRepository {
-    private static final String BASE_URL = "";
+    private static final String BASE_URL = "https://api.mapbox.com/";
     private ApiService apiService;
     private Retrofit retrofit;
+    private final String accessToken;
+
+    public AppRepository(String accessToken) {
+        this.accessToken = accessToken;
+
+        this.retrofit = new Retrofit.Builder()
+                .baseUrl(AppRepository.BASE_URL)
+                .build();
+        this.apiService = this.retrofit.create(ApiService.class);
+    }
 
     public ResponseBody forwardGeocode(String search) {
-        return apiService.forwardGeocode(search);//todo: should go to background
+        return apiService.forwardGeocode(search, this.accessToken);//todo: should go to background
     }
 
 }
