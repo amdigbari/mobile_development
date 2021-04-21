@@ -40,7 +40,8 @@
         android:text="Delete Data                                                        "
         android:textAppearance="@style/TextAppearance.AppCompat.Body2"
         android:textColor="@color/textColor"
-        android:textSize="18sp" />
+        android:textSize="18sp"
+        app:backgroundTint="@color/backgroundColor" />
 
 </LinearLayout>
 
