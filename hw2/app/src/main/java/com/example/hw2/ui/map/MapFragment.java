@@ -1,6 +1,7 @@
 package com.example.hw2.ui.map;
 
 import android.content.Context;
+import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -14,8 +15,14 @@ import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 
 import com.example.hw2.R;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.mancj.materialsearchbar.MaterialSearchBar;
+import com.mancj.materialsearchbar.adapter.SuggestionsAdapter;
 import com.mapbox.android.core.permissions.PermissionsListener;
 import com.mapbox.android.core.permissions.PermissionsManager;
+import com.mapbox.api.geocoding.v5.MapboxGeocoding;
+import com.mapbox.api.geocoding.v5.models.CarmenFeature;
+import com.mapbox.api.geocoding.v5.models.GeocodingResponse;
 import com.mapbox.mapboxsdk.Mapbox;
 import com.mapbox.mapboxsdk.annotations.IconFactory;
 import com.mapbox.mapboxsdk.annotations.Marker;
@@ -29,14 +36,28 @@ import com.mapbox.mapboxsdk.maps.Style;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
-public class MapFragment extends Fragment implements OnMapReadyCallback, PermissionsListener {
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+
+public class MapFragment extends Fragment implements OnMapReadyCallback, PermissionsListener, MaterialSearchBar.OnSearchActionListener, SuggestionsAdapter.OnItemViewClickListener {
 
     private MapView mapView;
     private PermissionsManager permissionsManager;
     private MapboxMap mapboxMap;
-    private Marker userMarker;
+    private Marker marker;
+    private MaterialSearchBar searchBar;
+    private CustomSuggestionsAdapter customSuggestionsAdapter;
+    private final List<CarmenFeature> searchedAddressesList = new ArrayList<>();
+    public ExecutorService threadPoolExecutor =
+            new ThreadPoolExecutor(5, 10, 5000, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>());
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
@@ -45,14 +66,31 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, Permiss
         View root = inflater.inflate(R.layout.fragment_map, container, false);
 
         initializeMap(root, savedInstanceState);
+        initializeSearchBar(root, inflater);
 
         return root;
     }
 
+    private void initializeSearchBar(View view, LayoutInflater inflater) {
+        this.searchBar = view.findViewById(R.id.searchBar);
+        this.searchBar.setHint("Search Address");
+        this.searchBar.setSpeechMode(true);
+        //enable searchbar callbacks
+        this.searchBar.setOnSearchActionListener(this);
+
+        this.customSuggestionsAdapter = new CustomSuggestionsAdapter(inflater);
+        this.customSuggestionsAdapter.setListener(this);
+        this.customSuggestionsAdapter.setSuggestions(this.searchedAddressesList);
+        this.searchBar.setCustomSuggestionAdapter(this.customSuggestionsAdapter);
+    }
+
     private void initializeMap(View view, Bundle savedInstanceState) {
-        this.mapView = (MapView) view.findViewById(R.id.mapView);
+        this.mapView = view.findViewById(R.id.mapView);
         this.mapView.onCreate(savedInstanceState);
         this.mapView.getMapAsync(this);
+
+        FloatingActionButton currentLocationButton = view.findViewById(R.id.get_location);
+        currentLocationButton.setOnClickListener(view1 -> getUserLocation());
     }
 
     @Override
@@ -60,23 +98,23 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, Permiss
         this.mapboxMap = mapboxMap;
 
         this.mapboxMap.addOnMapLongClickListener(point -> {
-            System.out.println("Long Tap");
+            showNewMarker(new LatLng(point.getLatitude(), point.getLongitude()), false);
             // TODO: show modal and store data to database
             return false;
         });
 
         mapboxMap.setStyle(new Style.Builder().fromUri("mapbox://styles/mapbox/streets-v11"),
-                this::getUserLocation);
+                style -> getUserLocation());
     }
 
     @SuppressWarnings({"MissingPermission"})
-    private void getUserLocation(@NonNull Style loadedMapStyle) {
+    private void getUserLocation() {
         // Check if permissions are enabled and if not request
         if (PermissionsManager.areLocationPermissionsGranted(this.requireContext())) {
             LocationManager lm = (LocationManager) this.requireActivity().getSystemService(Context.LOCATION_SERVICE);
             LocationListener locationListener = new LocationListener() {
                 public void onLocationChanged(Location location) {
-                    showUserNewMarker(new LatLng(location.getLatitude(), location.getLongitude()));
+                    showNewMarker(new LatLng(location.getLatitude(), location.getLongitude()), true);
                 }
 
                 @Override
@@ -99,12 +137,43 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, Permiss
         }
     }
 
-    private void showUserNewMarker(LatLng latLng) {
-        if (this.userMarker != null) {
-            this.mapboxMap.removeMarker(this.userMarker);
+    private void showNewMarker(LatLng latLng, boolean isUser) {
+        if (this.marker != null) {
+            this.mapboxMap.removeMarker(this.marker);
         }
-        this.mapboxMap.setCameraPosition(new CameraPosition.Builder().target(latLng).zoom(16).build());
-        this.userMarker = this.mapboxMap.addMarker(new MarkerOptions().position(latLng).icon(IconFactory.getInstance(requireActivity()).fromResource(R.drawable.black_marker)));
+        this.mapboxMap.animateCamera(mapboxMap -> new CameraPosition.Builder().target(latLng).zoom(16).build());
+        this.marker = this.mapboxMap.addMarker(new MarkerOptions().position(latLng).icon(IconFactory.getInstance(requireActivity()).fromResource(isUser ? R.drawable.black_marker : R.drawable.red_marker)));
+    }
+
+    private void searchAddress(String address) {
+        this.threadPoolExecutor.execute(() -> {
+            MapboxGeocoding mapboxGeocoding = MapboxGeocoding.builder()
+                    .accessToken(getResources().getString(R.string.mapbox_access_token))
+                    .query(address)
+                    .build();
+
+            mapboxGeocoding.enqueueCall(new Callback<GeocodingResponse>() {
+                @Override
+                public void onResponse(@NotNull Call<GeocodingResponse> call, @NotNull Response<GeocodingResponse> response) {
+                    assert response.body() != null;
+                    List<CarmenFeature> results = response.body().features();
+
+                    searchedAddressesList.clear();
+                    if (results.size() > 0) {
+                        searchedAddressesList.addAll(results);
+                        searchBar.showSuggestionsList();
+                    } else {
+                        searchBar.hideSuggestionsList();
+                    }
+                    customSuggestionsAdapter.notifyDataSetChanged();
+                }
+
+                @Override
+                public void onFailure(@NotNull Call<GeocodingResponse> call, Throwable t) {
+                    t.printStackTrace();
+                }
+            });
+        });
     }
 
     @Override
@@ -120,7 +189,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, Permiss
     @Override
     public void onPermissionResult(boolean granted) {
         if (granted) {
-            mapboxMap.getStyle(this::getUserLocation);
+            getUserLocation();
         } else {
             Toast.makeText(this.getContext(), R.string.user_location_permission_not_granted, Toast.LENGTH_LONG).show();
         }
@@ -166,5 +235,38 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, Permiss
     public void onDestroyView() {
         super.onDestroyView();
         mapView.onDestroy();
+    }
+
+    @Override
+    public void onSearchStateChanged(boolean enabled) {
+    }
+
+    @Override
+    public void onSearchConfirmed(CharSequence text) {
+        searchAddress(text.toString());
+    }
+
+    @Override
+    public void onButtonClicked(int buttonCode) {
+    }
+
+    @Override
+    public void OnItemClickListener(int position, View v) {
+        if (v.getTag() instanceof CarmenFeature) {
+            CarmenFeature feature = (CarmenFeature) v.getTag();
+            this.searchBar.hideSuggestionsList();
+            this.searchBar.setText("");
+            this.searchBar.clearFocus();
+
+            LatLng latLng = new LatLng(feature.center().latitude(), feature.center().longitude());
+            showNewMarker(latLng, false);
+
+            // TODO: Show save modal
+        }
+    }
+
+    @Override
+    public void OnItemDeleteListener(int position, View v) {
+
     }
 }
