@@ -6,16 +6,23 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.RelativeLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 
 import com.example.hw2.R;
+import com.example.hw2.model.Place;
+import com.example.hw2.repository.db.AppDatabase;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.textfield.TextInputEditText;
 import com.mancj.materialsearchbar.MaterialSearchBar;
 import com.mancj.materialsearchbar.adapter.SuggestionsAdapter;
 import com.mapbox.android.core.permissions.PermissionsListener;
@@ -38,11 +45,16 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import io.reactivex.Completable;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.schedulers.Schedulers;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -58,6 +70,12 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, Permiss
     private final List<CarmenFeature> searchedAddressesList = new ArrayList<>();
     public ExecutorService threadPoolExecutor =
             new ThreadPoolExecutor(5, 10, 5000, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>());
+    private TextView locationGeocode;
+    private TextInputEditText locationName;
+    private RelativeLayout saveModal;
+    private LatLng savingLocation;
+    private FloatingActionButton userLocation;
+    private Disposable disposable;
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
@@ -65,17 +83,66 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, Permiss
 
         View root = inflater.inflate(R.layout.fragment_map, container, false);
 
+        this.userLocation = root.findViewById(R.id.get_location);
+
+        initializeModal(root);
         initializeMap(root, savedInstanceState);
         initializeSearchBar(root, inflater);
 
         return root;
     }
 
+    private void initializeModal(View view) {
+        this.saveModal = view.findViewById(R.id.save_modal);
+        this.locationGeocode = view.findViewById(R.id.location_geocode);
+        this.locationName = view.findViewById(R.id.location_name);
+        Button saveLocation = view.findViewById(R.id.save_location);
+        Button cancelSave = view.findViewById(R.id.cancel_save);
+
+        this.saveModal.setVisibility(View.INVISIBLE);
+
+        saveLocation.setOnClickListener(v -> {
+            if (Objects.requireNonNull(this.locationName.getText()).toString().trim().length() == 0) {
+                this.saveToDB("Location " + Math.round(Math.random() * 5000), this.savingLocation);
+            } else {
+                this.saveToDB(this.locationName.getText().toString(), this.savingLocation);
+            }
+            this.hideModal();
+        });
+
+        cancelSave.setOnClickListener(v -> this.hideModal());
+    }
+
+    private void saveToDB(String name, LatLng latLng) {
+        Place place = new Place();
+        place.setLatitude(String.valueOf(latLng.getLatitude()));
+        place.setLongitude(String.valueOf(latLng.getLongitude()));
+        place.setName(name);
+        place.setPriority(1);
+
+        this.threadPoolExecutor.execute(() -> {
+            AppDatabase database = AppDatabase.getInstance(getContext());
+
+            disposable = Completable.fromAction(() -> {
+                database.getAppDao().insert(place);
+            })
+                    .subscribeOn(Schedulers.io())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe(() -> Toast.makeText(getContext(), "Location saved with name: " + place.getName(), Toast.LENGTH_LONG).show());
+        });
+    }
+
+    private void hideModal() {
+        this.deleteMarker();
+        this.saveModal.setVisibility(View.INVISIBLE);
+        this.userLocation.setVisibility(View.VISIBLE);
+    }
+
     private void initializeSearchBar(View view, LayoutInflater inflater) {
         this.searchBar = view.findViewById(R.id.searchBar);
         this.searchBar.setHint("Search Address");
         this.searchBar.setSpeechMode(true);
-        //enable searchbar callbacks
+
         this.searchBar.setOnSearchActionListener(this);
 
         this.customSuggestionsAdapter = new CustomSuggestionsAdapter(inflater);
@@ -89,8 +156,15 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, Permiss
         this.mapView.onCreate(savedInstanceState);
         this.mapView.getMapAsync(this);
 
-        FloatingActionButton currentLocationButton = view.findViewById(R.id.get_location);
-        currentLocationButton.setOnClickListener(view1 -> getUserLocation());
+        this.userLocation.setOnClickListener(view1 -> getUserLocation());
+    }
+
+    private void showSaveModal() {
+        this.locationName.setText("");
+        this.locationGeocode.setText(new StringBuilder("Save Location (\"").append(this.savingLocation.getLatitude()).append("\", \"").append(this.savingLocation.getLatitude()).append("\")"));
+        this.saveModal.setVisibility(View.VISIBLE);
+        this.locationName.requestFocus();
+        this.userLocation.setVisibility(View.INVISIBLE);
     }
 
     @Override
@@ -98,8 +172,9 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, Permiss
         this.mapboxMap = mapboxMap;
 
         this.mapboxMap.addOnMapLongClickListener(point -> {
-            showNewMarker(new LatLng(point.getLatitude(), point.getLongitude()), false);
-            // TODO: show modal and store data to database
+            this.savingLocation = new LatLng(point.getLatitude(), point.getLongitude());
+            showNewMarker(this.savingLocation, false);
+            this.showSaveModal();
             return false;
         });
 
@@ -137,10 +212,14 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, Permiss
         }
     }
 
-    private void showNewMarker(LatLng latLng, boolean isUser) {
+    private void deleteMarker() {
         if (this.marker != null) {
             this.mapboxMap.removeMarker(this.marker);
         }
+    }
+
+    private void showNewMarker(LatLng latLng, boolean isUser) {
+        this.deleteMarker();
         this.mapboxMap.animateCamera(mapboxMap -> new CameraPosition.Builder().target(latLng).zoom(16).build());
         this.marker = this.mapboxMap.addMarker(new MarkerOptions().position(latLng).icon(IconFactory.getInstance(requireActivity()).fromResource(isUser ? R.drawable.black_marker : R.drawable.red_marker)));
     }
@@ -169,7 +248,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, Permiss
                 }
 
                 @Override
-                public void onFailure(@NotNull Call<GeocodingResponse> call, Throwable t) {
+                public void onFailure(@NotNull Call<GeocodingResponse> call, @NotNull Throwable t) {
                     t.printStackTrace();
                 }
             });
@@ -233,6 +312,9 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, Permiss
 
     @Override
     public void onDestroyView() {
+        if (disposable != null) {
+            disposable.dispose();
+        }
         super.onDestroyView();
         mapView.onDestroy();
     }
@@ -258,10 +340,9 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, Permiss
             this.searchBar.setText("");
             this.searchBar.clearFocus();
 
-            LatLng latLng = new LatLng(feature.center().latitude(), feature.center().longitude());
-            showNewMarker(latLng, false);
-
-            // TODO: Show save modal
+            this.savingLocation = new LatLng(Objects.requireNonNull(feature.center()).latitude(), feature.center().longitude());
+            showNewMarker(this.savingLocation, false);
+            showSaveModal();
         }
     }
 

@@ -15,13 +15,13 @@
         tools:layout_editor_absoluteX="28dp">
 
         <com.mancj.materialsearchbar.MaterialSearchBar
+            android:id="@+id/searchBar"
             style="@style/MaterialSearchBarLight"
-            app:mt_speechMode="true"
-            app:mt_maxSuggestionsCount="10"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:id="@+id/searchBar"
-            app:mt_placeholder="@string/search_bar_placeholder"/>
+            app:mt_maxSuggestionsCount="10"
+            app:mt_placeholder="@string/search_bar_placeholder"
+            app:mt_speechMode="true" />
 
 
         <com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -32,8 +32,64 @@
             android:clickable="true"
             android:focusable="true"
             android:src="@drawable/ic_location"
-            android:translationX="-30px"
-            android:translationY="-200px"
+            android:translationX="-20dp"
+            android:translationY="-80dp"
             app:fabSize="auto" />
+
+        <RelativeLayout
+            android:id="@+id/save_modal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:layout_marginHorizontal="20dp"
+            android:paddingHorizontal="15dp"
+            android:paddingVertical="10dp"
+            android:translationY="-80dp"
+            android:background="@color/white">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                tools:ignore="UselessParent">
+
+                <TextView
+                    android:id="@+id/location_geocode"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/search_location" />
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="15dp">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/location_name"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="@string/search_location" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <Button
+                    android:id="@+id/save_location"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="right"
+                    android:layout_marginTop="5dp"
+                    android:text="@string/save"
+                    tools:ignore="RtlHardcoded" />
+
+                <Button
+                    android:id="@+id/cancel_save"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="left"
+                    android:layout_marginTop="-50dp"
+                    android:text="@string/cancel"
+                    tools:ignore="RtlHardcoded"/>
+
+            </LinearLayout>
+        </RelativeLayout>
     </com.mapbox.mapboxsdk.maps.MapView>
 </androidx.constraintlayout.widget.ConstraintLayout>

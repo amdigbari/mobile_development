@@ -9,42 +9,36 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
-import  android.widget.Button;
+import android.widget.Button;
 import android.widget.Switch;
-import android.widget.TextView;
+
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.fragment.app.Fragment;
-import androidx.lifecycle.ViewModelProvider;
 
 import com.example.hw2.R;
 
-import static android.content.Context.MODE_PRIVATE;
 
+@SuppressLint("UseSwitchCompatOrMaterialCode")
 public class SettingsFragment extends Fragment {
 
-    private SettingsViewModel settingsViewModel;
     private Switch switchDark;
-    private TextView settings;
-    private Button data;
 
     @SuppressLint("SetTextI18n")
     @Override
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
-        settingsViewModel =
-                new ViewModelProvider(this).get(SettingsViewModel.class);
         View root = inflater.inflate(R.layout.fragment_settings, container, false);
-        Switch switchDark = (Switch) getView().findViewById(R.id.switch1);
-        TextView settings = (TextView) getView().findViewById(R.id.setting_text_view);
-        Button data = (Button) getView().findViewById(R.id.data_button);
+        this.switchDark = (Switch) root.findViewById(R.id.switch1);
+        TextView settings = (TextView) root.findViewById(R.id.setting_text_view);
+        Button data = (Button) root.findViewById(R.id.data_button);
         settings.setText("Settings");
         data.setText("Delete Data                                               ");
         data.setBackgroundColor(Color.WHITE);
         // Saving state of our app
         // using SharedPreferences
-        SharedPreferences sharedPreferences = this.getActivity().getSharedPreferences("shrredPrefs", Context.MODE_PRIVATE);
+        SharedPreferences sharedPreferences = this.requireActivity().getSharedPreferences("shrredPrefs", Context.MODE_PRIVATE);
         final SharedPreferences.Editor editor
                 = sharedPreferences.edit();
         final boolean isDarkModeOn
@@ -57,58 +51,48 @@ public class SettingsFragment extends Fragment {
         switchDark.setText("  Dark Mode");
         if (isDarkModeOn) {
             AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
-        }
-        else {
+        } else {
             AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
 
         }
 
         switchDark.setOnClickListener(
-                new View.OnClickListener() {
+                view -> {
+                    // When user taps the enable/disable
+                    // dark mode button
+                    if (isDarkModeOn) {
 
-                    @Override
-                    public void onClick(View view)
-                    {
-                        // When user taps the enable/disable
-                        // dark mode button
-                        if (isDarkModeOn) {
+                        // if dark mode is on it
+                        // will turn it off
+                        AppCompatDelegate
+                                .setDefaultNightMode(
+                                        AppCompatDelegate
+                                                .MODE_NIGHT_NO);
+                        // it will set isDarkModeOn
+                        // boolean to false
+                        editor.putBoolean(
+                                "isDarkModeOn", false);
 
-                            // if dark mode is on it
-                            // will turn it off
-                            AppCompatDelegate
-                                    .setDefaultNightMode(
-                                            AppCompatDelegate
-                                                    .MODE_NIGHT_NO);
-                            // it will set isDarkModeOn
-                            // boolean to false
-                            editor.putBoolean(
-                                    "isDarkModeOn", false);
-                            editor.apply();
+                        // change text of Button
+                    } else {
 
-                            // change text of Button
-                            switchDark.setText(
-                                    " Dark Mode");
-                        }
-                        else {
+                        // if dark mode is off
+                        // it will turn it on
+                        AppCompatDelegate
+                                .setDefaultNightMode(
+                                        AppCompatDelegate
+                                                .MODE_NIGHT_YES);
 
-                            // if dark mode is off
-                            // it will turn it on
-                            AppCompatDelegate
-                                    .setDefaultNightMode(
-                                            AppCompatDelegate
-                                                    .MODE_NIGHT_YES);
+                        // it will set isDarkModeOn
+                        // boolean to true
+                        editor.putBoolean(
+                                "isDarkModeOn", true);
 
-                            // it will set isDarkModeOn
-                            // boolean to true
-                            editor.putBoolean(
-                                    "isDarkModeOn", true);
-                            editor.apply();
-
-                            // change text of Button
-                            switchDark.setText(
-                                    " Dark Mode");
-                        }
+                        // change text of Button
                     }
+                    editor.apply();
+                    switchDark.setText(
+                            " Dark Mode");
                 });
         return root;
     }

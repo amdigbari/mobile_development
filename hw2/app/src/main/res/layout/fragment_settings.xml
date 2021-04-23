@@ -27,7 +27,8 @@
         android:fontFamily="sans-serif-black"
         android:padding="24dp"
         android:textSize="18sp"
-        tools:text="  Dark Mode" />
+        tools:text="  Dark Mode"
+        tools:ignore="UseSwitchCompatOrMaterialXml" />
 
     <Button
         android:id="@+id/data_button"
