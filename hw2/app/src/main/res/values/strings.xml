@@ -7,4 +7,7 @@
     <string name="user_location_permission_explanation">HW2 needed to access to your device\'s location</string>
     <string name="user_location_permission_not_granted">location permission is not granted</string>
     <string name="search_bar_placeholder">Search Address</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="search_location">Search Location</string>
 </resources>
