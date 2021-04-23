@@ -18,6 +18,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 
+import com.example.hw2.MainActivity;
 import com.example.hw2.R;
 import com.example.hw2.model.Place;
 import com.example.hw2.repository.db.AppDatabase;
@@ -68,8 +69,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, Permiss
     private MaterialSearchBar searchBar;
     private CustomSuggestionsAdapter customSuggestionsAdapter;
     private final List<CarmenFeature> searchedAddressesList = new ArrayList<>();
-    public ExecutorService threadPoolExecutor =
-            new ThreadPoolExecutor(5, 10, 5000, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>());
     private TextView locationGeocode;
     private TextInputEditText locationName;
     private RelativeLayout saveModal;
@@ -120,7 +119,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, Permiss
         place.setName(name);
         place.setPriority(1);
 
-        this.threadPoolExecutor.execute(() -> {
+        MainActivity.threadPoolExecutor.execute(() -> {
             AppDatabase database = AppDatabase.getInstance(getContext());
 
             disposable = Completable.fromAction(() -> {
@@ -225,7 +224,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, Permiss
     }
 
     private void searchAddress(String address) {
-        this.threadPoolExecutor.execute(() -> {
+        MainActivity.threadPoolExecutor.execute(() -> {
             MapboxGeocoding mapboxGeocoding = MapboxGeocoding.builder()
                     .accessToken(getResources().getString(R.string.mapbox_access_token))
                     .query(address)

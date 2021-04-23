@@ -9,6 +9,7 @@
     <color name="white">#FFFFFFFF</color>
     <color name="backgroundColor">#FCFCFC</color>
     <color name="textColor">#000000</color>
+    <color name="gray">#a3a3a3</color>
 
 
     //Material SearchBar Light Theme Colors
