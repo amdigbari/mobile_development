@@ -1,12 +1,16 @@
 package com.example.hw2.ui.map;
 
+import android.Manifest;
+import android.app.Activity;
 import android.content.Context;
-import android.graphics.drawable.Drawable;
+import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.os.Build;
 import android.os.Bundle;
-import android.util.Log;
+import android.speech.RecognizerIntent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -16,6 +20,9 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
 import com.example.hw2.MainActivity;
@@ -46,11 +53,8 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
 import io.reactivex.Completable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
@@ -61,7 +65,7 @@ import retrofit2.Callback;
 import retrofit2.Response;
 
 public class MapFragment extends Fragment implements OnMapReadyCallback, PermissionsListener, MaterialSearchBar.OnSearchActionListener, SuggestionsAdapter.OnItemViewClickListener {
-
+    public static final Integer RecordAudioRequestCode = 1;
     private MapView mapView;
     private PermissionsManager permissionsManager;
     private MapboxMap mapboxMap;
@@ -84,11 +88,21 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, Permiss
 
         this.userLocation = root.findViewById(R.id.get_location);
 
+        initializeSpeechRecognizer();
+
         initializeModal(root);
         initializeMap(root, savedInstanceState);
         initializeSearchBar(root, inflater);
 
         return root;
+    }
+
+    private void initializeSpeechRecognizer() {
+        if (ContextCompat.checkSelfPermission(this.getContext(), Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                ActivityCompat.requestPermissions(this.getActivity(), new String[]{Manifest.permission.RECORD_AUDIO}, RecordAudioRequestCode);
+            }
+        }
     }
 
     private void initializeModal(View view) {
@@ -122,9 +136,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, Permiss
         MainActivity.threadPoolExecutor.execute(() -> {
             AppDatabase database = AppDatabase.getInstance(getContext());
 
-            disposable = Completable.fromAction(() -> {
-                database.getAppDao().insert(place);
-            })
+            disposable = Completable.fromAction(() -> database.getAppDao().insert(place))
                     .subscribeOn(Schedulers.io())
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe(() -> Toast.makeText(getContext(), "Location saved with name: " + place.getName(), Toast.LENGTH_LONG).show());
@@ -329,6 +341,16 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, Permiss
 
     @Override
     public void onButtonClicked(int buttonCode) {
+        if (buttonCode == 1) {
+            Intent speechRecognizerIntent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+            speechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+            speechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
+            speechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak to text");
+            try {
+                startActivityForResult(speechRecognizerIntent, RecordAudioRequestCode);
+            } catch (Exception ignored) {
+            }
+        }
     }
 
     @Override
@@ -347,6 +369,19 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, Permiss
 
     @Override
     public void OnItemDeleteListener(int position, View v) {
+    }
 
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == RecordAudioRequestCode) {
+            if (resultCode == Activity.RESULT_OK && data != null) {
+                ArrayList<String> result = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+                String text = result.get(0);
+                this.searchBar.setText(text);
+                this.searchBar.setPlaceHolder(text);
+                searchAddress(text);
+            }
+        }
     }
 }
