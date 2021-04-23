@@ -1,10 +1,13 @@
 package com.example.hw2.model;
 
+import android.os.Parcel;
+import android.os.Parcelable;
+
 import androidx.room.Entity;
 import androidx.room.PrimaryKey;
 
 @Entity(tableName = "place_table")
-public class Place {
+public class Place implements Parcelable {
     @PrimaryKey(autoGenerate = true)
     private long id;
 
@@ -12,6 +15,8 @@ public class Place {
     private String latitude;
     private String  Longitude;
     private int priority;
+
+    public Place() { }
 
     public void setId(long id) {
         this.id = id;
@@ -64,4 +69,36 @@ public class Place {
                 ", priority=" + priority +
                 '}';
     }
+
+    protected Place(Parcel in) {
+        name = in.readString();
+        latitude = in.readString();
+        Longitude = in.readString();
+        priority = in.readInt();
+    }
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeString(name);
+        dest.writeString(latitude);
+        dest.writeString(Longitude);
+        dest.writeInt(priority);
+    }
+
+    public static final Parcelable.Creator<Place> CREATOR = new Parcelable.Creator<Place>() {
+        @Override
+        public Place createFromParcel(Parcel in) {
+            return new Place(in);
+        }
+
+        @Override
+        public Place[] newArray(int size) {
+            return new Place[size];
+        }
+    };
 }

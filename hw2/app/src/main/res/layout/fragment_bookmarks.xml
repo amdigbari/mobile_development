@@ -4,7 +4,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".ui.bookmarks.BookmarksFragment">
+    tools:context=".ui.bookmarks.BookmarksFragment"
+    app:backgroundTint="?attr/bgColor">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -13,7 +14,7 @@
 
         <com.mancj.materialsearchbar.MaterialSearchBar
             android:id="@+id/search_bookmarks"
-            style="@style/MaterialSearchBarLight"
+            style="@style/MyCustomTheme"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:mt_placeholder="@string/search_bar_placeholder"

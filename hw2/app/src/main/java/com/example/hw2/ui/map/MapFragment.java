@@ -1,12 +1,17 @@
 package com.example.hw2.ui.map;
 
+import android.Manifest;
+import android.app.Activity;
 import android.content.Context;
-import android.graphics.drawable.Drawable;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.os.Build;
 import android.os.Bundle;
-import android.util.Log;
+import android.speech.RecognizerIntent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -16,6 +21,10 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatDelegate;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
 import com.example.hw2.MainActivity;
@@ -46,11 +55,8 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
 import io.reactivex.Completable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
@@ -61,7 +67,7 @@ import retrofit2.Callback;
 import retrofit2.Response;
 
 public class MapFragment extends Fragment implements OnMapReadyCallback, PermissionsListener, MaterialSearchBar.OnSearchActionListener, SuggestionsAdapter.OnItemViewClickListener {
-
+    public static final Integer RecordAudioRequestCode = 1;
     private MapView mapView;
     private PermissionsManager permissionsManager;
     private MapboxMap mapboxMap;
@@ -75,20 +81,35 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, Permiss
     private LatLng savingLocation;
     private FloatingActionButton userLocation;
     private Disposable disposable;
+    private boolean showInitialMarker = false;
+    private Place initialPlace;
 
-    public View onCreateView(@NonNull LayoutInflater inflater,
-                             ViewGroup container, Bundle savedInstanceState) {
+    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         Mapbox.getInstance(this.requireContext(), getString(R.string.mapbox_access_token));
 
         View root = inflater.inflate(R.layout.fragment_map, container, false);
 
         this.userLocation = root.findViewById(R.id.get_location);
 
+        initializeSpeechRecognizer();
+
         initializeModal(root);
         initializeMap(root, savedInstanceState);
         initializeSearchBar(root, inflater);
 
+        assert getArguments() != null;
+        this.showInitialMarker = getArguments().getBoolean("isFromBookmark");
+        this.initialPlace = getArguments().getParcelable("place");
+
         return root;
+    }
+
+    private void initializeSpeechRecognizer() {
+        if (ContextCompat.checkSelfPermission(this.requireContext(), Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                ActivityCompat.requestPermissions(this.requireActivity(), new String[]{Manifest.permission.RECORD_AUDIO}, RecordAudioRequestCode);
+            }
+        }
     }
 
     private void initializeModal(View view) {
@@ -122,9 +143,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, Permiss
         MainActivity.threadPoolExecutor.execute(() -> {
             AppDatabase database = AppDatabase.getInstance(getContext());
 
-            disposable = Completable.fromAction(() -> {
-                database.getAppDao().insert(place);
-            })
+            disposable = Completable.fromAction(() -> database.getAppDao().insert(place))
                     .subscribeOn(Schedulers.io())
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe(() -> Toast.makeText(getContext(), "Location saved with name: " + place.getName(), Toast.LENGTH_LONG).show());
@@ -160,7 +179,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, Permiss
 
     private void showSaveModal() {
         this.locationName.setText("");
-        this.locationGeocode.setText(new StringBuilder("Save Location (\"").append(this.savingLocation.getLatitude()).append("\", \"").append(this.savingLocation.getLatitude()).append("\")"));
+        this.locationGeocode.setText(new StringBuilder("(\"").append(this.savingLocation.getLatitude()).append("\", \"").append(this.savingLocation.getLatitude()).append("\")"));
         this.saveModal.setVisibility(View.VISIBLE);
         this.locationName.requestFocus();
         this.userLocation.setVisibility(View.INVISIBLE);
@@ -177,8 +196,22 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, Permiss
             return false;
         });
 
-        mapboxMap.setStyle(new Style.Builder().fromUri("mapbox://styles/mapbox/streets-v11"),
-                style -> getUserLocation());
+        SharedPreferences sharedPreferences = this.requireActivity().getSharedPreferences("shrredPrefs", Context.MODE_PRIVATE);
+        final boolean isDarkModeOn = sharedPreferences.getBoolean("isDarkModeOn", false);
+        String mapStyle;
+        if (isDarkModeOn) {
+            mapStyle = "mapbox://styles/mapbox/dark-v10";
+        } else {
+            mapStyle = "mapbox://styles/mapbox/light-v10";
+        }
+        mapboxMap.setStyle(new Style.Builder().fromUri(mapStyle),
+                style -> {
+                    if (showInitialMarker) {
+                        this.showNewMarker(new LatLng(Double.parseDouble(initialPlace.getLatitude()), Double.parseDouble(initialPlace.getLongitude())), false);
+                    } else {
+                        getUserLocation();
+                    }
+                });
     }
 
     @SuppressWarnings({"MissingPermission"})
@@ -298,12 +331,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, Permiss
     }
 
     @Override
-    public void onSaveInstanceState(@NotNull Bundle outState) {
-        super.onSaveInstanceState(outState);
-        mapView.onSaveInstanceState(outState);
-    }
-
-    @Override
     public void onLowMemory() {
         super.onLowMemory();
         mapView.onLowMemory();
@@ -329,6 +356,16 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, Permiss
 
     @Override
     public void onButtonClicked(int buttonCode) {
+        if (buttonCode == 1) {
+            Intent speechRecognizerIntent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+            speechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+            speechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
+            speechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak to text");
+            try {
+                startActivityForResult(speechRecognizerIntent, RecordAudioRequestCode);
+            } catch (Exception ignored) {
+            }
+        }
     }
 
     @Override
@@ -347,6 +384,20 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, Permiss
 
     @Override
     public void OnItemDeleteListener(int position, View v) {
+    }
 
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == RecordAudioRequestCode) {
+            if (resultCode == Activity.RESULT_OK && data != null) {
+                ArrayList<String> result = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+                assert result != null;
+                String text = result.get(0);
+                this.searchBar.setText(text);
+                this.searchBar.setPlaceHolder(text);
+                searchAddress(text);
+            }
+        }
     }
 }
