@@ -10,4 +10,5 @@
     <string name="save">Save</string>
     <string name="cancel">Cancel</string>
     <string name="search_location">Search Location</string>
+    <string name="place_removed">Location removed Successfully.</string>
 </resources>
