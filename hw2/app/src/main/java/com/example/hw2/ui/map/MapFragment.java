@@ -79,9 +79,12 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, Permiss
     private LatLng savingLocation;
     private FloatingActionButton userLocation;
     private Disposable disposable;
+    private boolean isFromBookmark = false;
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
+        isFromBookmark = getArguments().getBoolean("isFromBookmark");
+
         Mapbox.getInstance(this.requireContext(), getString(R.string.mapbox_access_token));
 
         View root = inflater.inflate(R.layout.fragment_map, container, false);
