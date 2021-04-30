@@ -15,4 +15,7 @@
     <string name="save_location">Save Location</string>
     <string name="dark_mode">Dark Mode</string>
     <string name="delete_data">Delete Data</string>
+    <string name="clear_data">Clear Data</string>
+    <string name="sure_about_clear_data">This will clear all data on your app. Do you want to continue?</string>
+    <string name="confirm">Confirm</string>
 </resources>

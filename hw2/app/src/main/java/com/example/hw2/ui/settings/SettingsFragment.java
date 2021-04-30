@@ -31,6 +31,7 @@ import com.example.hw2.repository.db.AppDatabase;
 @SuppressLint("UseSwitchCompatOrMaterialCode")
 public class SettingsFragment extends Fragment {
     private Disposable disposable;
+
     @SuppressLint("SetTextI18n")
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -46,24 +47,14 @@ public class SettingsFragment extends Fragment {
         data.setOnClickListener(v -> {
             AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
 
-            builder.setTitle("Clear Data");
-            builder.setMessage("this will clear all data on your app." +
-                    "do you want to cotinue?");
+            builder.setTitle(R.string.clear_data);
+            builder.setMessage(R.string.sure_about_clear_data);
 
-            builder.setPositiveButton("YES", (dialog, which) -> {
+            builder.setPositiveButton(R.string.confirm, (dialog, which) -> {
                 clearDb();
                 dialog.dismiss();
             });
-
-            builder.setNegativeButton("CANCEL", new DialogInterface.OnClickListener() {
-
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-
-                    // Do nothing
-                    dialog.dismiss();
-                }
-            });
+            builder.setNegativeButton(R.string.cancel, (dialog, which) -> dialog.dismiss());
 
             AlertDialog alert = builder.create();
             alert.show();
@@ -89,15 +80,14 @@ public class SettingsFragment extends Fragment {
                 });
         return root;
     }
+
     private void clearDb() {
         MainActivity.threadPoolExecutor.execute(() -> {
             AppDatabase database = AppDatabase.getInstance(getContext());
             disposable = Completable.fromAction(() -> database.getAppDao().deleteAllPlaces())
                     .subscribeOn(Schedulers.io())
                     .observeOn(AndroidSchedulers.mainThread())
-                    .subscribe(() -> {
-                        Toast.makeText(getContext(), R.string.data_deleted, Toast.LENGTH_LONG).show();
-                    });
+                    .subscribe(() -> Toast.makeText(getContext(), R.string.data_deleted, Toast.LENGTH_LONG).show());
         });
     }
 }
