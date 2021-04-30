@@ -10,4 +10,8 @@
     <string name="save">Save</string>
     <string name="cancel">Cancel</string>
     <string name="search_location">Search Location</string>
+    <string name="place_removed">Location removed Successfully.</string>
+    <string name="save_location">Save Location</string>
+    <string name="dark_mode">Dark Mode</string>
+    <string name="delete_data">Delete Data</string>
 </resources>

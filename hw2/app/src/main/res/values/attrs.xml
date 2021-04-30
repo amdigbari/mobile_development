@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Other values-->
+    <attr name="textPrimaryColor" format="reference" />
+    <attr name="textSecondaryColor" format="reference" />
+    <attr name="redColor" format="reference" />
+    <attr name="bgColor" format="reference" />
+    <attr name="iconColor" format="reference" />
+
+</resources>
