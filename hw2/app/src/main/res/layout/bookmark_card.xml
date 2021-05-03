@@ -12,6 +12,16 @@
         android:orientation="horizontal"
         tools:ignore="MissingConstraints">
 
+        <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:clickable="true"
+            android:focusable="true"
+            android:paddingHorizontal="10dp"
+            app:srcCompat="@drawable/ic_bookmark_black_24dp"
+            tools:ignore="VectorDrawableCompat"
+            app:tint="?attr/iconColor" />
+
         <LinearLayout
             android:id="@+id/show_bookmark"
             android:layout_width="0dp"
@@ -28,7 +38,8 @@
                 android:id="@+id/bookmark_name"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/app_name" />
+                android:text="@string/app_name"
+                android:textColor="?attr/textPrimaryColor" />
 
             <TextView
                 android:id="@+id/bookmark_geocode"
@@ -36,7 +47,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="5dp"
                 android:text="@string/app_name"
-                android:textColor="@color/gray"
+                android:textColor="?attr/textSecondaryColor"
                 android:textSize="12sp"/>
 
         </LinearLayout>
@@ -49,6 +60,7 @@
             android:focusable="true"
             android:paddingHorizontal="10dp"
             app:srcCompat="@drawable/ic_remove"
-            tools:ignore="VectorDrawableCompat" />
+            tools:ignore="VectorDrawableCompat"
+            app:tint="?attr/iconColor" />
     </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

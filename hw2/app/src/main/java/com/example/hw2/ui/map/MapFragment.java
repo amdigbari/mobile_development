@@ -4,6 +4,9 @@ import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
@@ -20,6 +23,10 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatDelegate;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -79,10 +86,11 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, Permiss
     private LatLng savingLocation;
     private FloatingActionButton userLocation;
     private Disposable disposable;
+    private boolean showInitialMarker = false;
+    private Place initialPlace;
     private boolean isFromBookmark = false;
 
-    public View onCreateView(@NonNull LayoutInflater inflater,
-                             ViewGroup container, Bundle savedInstanceState) {
+    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         isFromBookmark = getArguments().getBoolean("isFromBookmark");
 
         Mapbox.getInstance(this.requireContext(), getString(R.string.mapbox_access_token));
@@ -97,13 +105,17 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, Permiss
         initializeMap(root, savedInstanceState);
         initializeSearchBar(root, inflater);
 
+        assert getArguments() != null;
+        this.showInitialMarker = getArguments().getBoolean("isFromBookmark");
+        this.initialPlace = getArguments().getParcelable("place");
+
         return root;
     }
 
     private void initializeSpeechRecognizer() {
-        if (ContextCompat.checkSelfPermission(this.getContext(), Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+        if (ContextCompat.checkSelfPermission(this.requireContext(), Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                ActivityCompat.requestPermissions(this.getActivity(), new String[]{Manifest.permission.RECORD_AUDIO}, RecordAudioRequestCode);
+                ActivityCompat.requestPermissions(this.requireActivity(), new String[]{Manifest.permission.RECORD_AUDIO}, RecordAudioRequestCode);
             }
         }
     }
@@ -175,7 +187,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, Permiss
 
     private void showSaveModal() {
         this.locationName.setText("");
-        this.locationGeocode.setText(new StringBuilder("Save Location (\"").append(this.savingLocation.getLatitude()).append("\", \"").append(this.savingLocation.getLatitude()).append("\")"));
+        this.locationGeocode.setText(new StringBuilder("(\"").append(this.savingLocation.getLatitude()).append("\", \"").append(this.savingLocation.getLatitude()).append("\")"));
         this.saveModal.setVisibility(View.VISIBLE);
         this.locationName.requestFocus();
         this.userLocation.setVisibility(View.INVISIBLE);
@@ -192,8 +204,22 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, Permiss
             return false;
         });
 
-        mapboxMap.setStyle(new Style.Builder().fromUri("mapbox://styles/mapbox/streets-v11"),
-                style -> getUserLocation());
+        SharedPreferences sharedPreferences = this.requireActivity().getSharedPreferences("shrredPrefs", Context.MODE_PRIVATE);
+        final boolean isDarkModeOn = sharedPreferences.getBoolean("isDarkModeOn", false);
+        String mapStyle;
+        if (isDarkModeOn) {
+            mapStyle = "mapbox://styles/mapbox/dark-v10";
+        } else {
+            mapStyle = "mapbox://styles/mapbox/light-v10";
+        }
+        mapboxMap.setStyle(new Style.Builder().fromUri(mapStyle),
+                style -> {
+                    if (showInitialMarker) {
+                        this.showNewMarker(new LatLng(Double.parseDouble(initialPlace.getLatitude()), Double.parseDouble(initialPlace.getLongitude())), false);
+                    } else {
+                        getUserLocation();
+                    }
+                });
     }
 
     @SuppressWarnings({"MissingPermission"})
@@ -313,12 +339,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, Permiss
     }
 
     @Override
-    public void onSaveInstanceState(@NotNull Bundle outState) {
-        super.onSaveInstanceState(outState);
-        mapView.onSaveInstanceState(outState);
-    }
-
-    @Override
     public void onLowMemory() {
         super.onLowMemory();
         mapView.onLowMemory();
@@ -380,6 +400,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, Permiss
         if (requestCode == RecordAudioRequestCode) {
             if (resultCode == Activity.RESULT_OK && data != null) {
                 ArrayList<String> result = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+                assert result != null;
                 String text = result.get(0);
                 this.searchBar.setText(text);
                 this.searchBar.setPlaceHolder(text);

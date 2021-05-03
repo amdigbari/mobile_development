@@ -44,10 +44,6 @@ public class CustomSuggestionsAdapter extends SuggestionsAdapter<CarmenFeature, 
         return new AddressHolder(view);
     }
 
-    public interface OnItemViewClickListener {
-        void OnItemClickListener(int position, View v);
-    }
-
 
     public class AddressHolder extends RecyclerView.ViewHolder{
         protected TextView title;

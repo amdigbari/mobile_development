@@ -47,19 +47,18 @@ public class BookmarksFragment extends Fragment implements MaterialSearchBar.OnS
     private MaterialSearchBar searchBar;
 
     @SuppressLint("ResourceType")
-    public View onCreateView(@NonNull LayoutInflater inflater,
-                             ViewGroup container, Bundle savedInstanceState) {
+    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View root = inflater.inflate(R.layout.fragment_bookmarks, container, false);
 
         this.mRecyclerView = root.findViewById(R.id.bookmarks_list);
         this.mRecyclerView.setHasFixedSize(true);
         LinearLayoutManager mLayoutManager = new LinearLayoutManager(root.getContext());
         this.mRecyclerView.setLayoutManager(mLayoutManager);
-        this.mBookmarkAdapter = new BookmarksAdapter(places, position -> {
-            System.out.println("Show Map");
-            // TODO: navigate to map tab
-        }, position -> removeFromDb(mBookmarkAdapter.getItem(position)));
+        this.mBookmarkAdapter = new BookmarksAdapter(places, position -> navigate(mBookmarkAdapter.getItem(position)), position -> removeFromDb(mBookmarkAdapter.getItem(position)));
+
         this.mRecyclerView.setAdapter(this.mBookmarkAdapter);
+
+
 
         initializeSearchBar(root);
 
@@ -68,6 +67,21 @@ public class BookmarksFragment extends Fragment implements MaterialSearchBar.OnS
         readPlacesFromDb();
 
         return root;
+    }
+
+    private void initializeSpeechRecognizer() {
+        if (ContextCompat.checkSelfPermission(this.requireContext(), Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                ActivityCompat.requestPermissions(this.requireActivity(), new String[]{Manifest.permission.RECORD_AUDIO}, RecordAudioRequestCode);
+            }
+        }
+    }
+
+    private void initializeSearchBar(View view) {
+        this.searchBar = view.findViewById(R.id.search_bookmarks);
+        this.searchBar.setHint("Search Address");
+        this.searchBar.setSpeechMode(true);
+        this.searchBar.setOnSearchActionListener(this);
     }
 
     private void initializeSpeechRecognizer() {
@@ -169,6 +183,7 @@ public class BookmarksFragment extends Fragment implements MaterialSearchBar.OnS
         if (requestCode == BookmarksFragment.RecordAudioRequestCode) {
             if (resultCode == Activity.RESULT_OK && data != null) {
                 ArrayList<String> result = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+                assert result != null;
                 String text = result.get(0);
                 this.searchBar.setText(text);
                 this.searchBar.setPlaceHolder(text);
@@ -181,7 +196,7 @@ public class BookmarksFragment extends Fragment implements MaterialSearchBar.OnS
         Bundle args = new Bundle();
         args.putParcelable("place", place);
         args.putBoolean("isFromBookmark", true);
-        Navigation.findNavController(getView()).navigate(R.id.action_bookmarkFragment_to_mapFragment, args);
+        Navigation.findNavController(this.requireView()).navigate(R.id.action_bookmarkFragment_to_mapFragment, args);
     }
 
 }
