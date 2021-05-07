@@ -22,6 +22,7 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatDelegate;
@@ -34,6 +35,7 @@ import androidx.fragment.app.Fragment;
 
 import com.example.hw2.MainActivity;
 import com.example.hw2.R;
+import com.example.hw2.Utils;
 import com.example.hw2.model.Place;
 import com.example.hw2.repository.db.AppDatabase;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
@@ -88,7 +90,14 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, Permiss
     private Disposable disposable;
     private boolean showInitialMarker = false;
     private Place initialPlace;
+    private Button saveLocation;
     private boolean isFromBookmark = false;
+    private OnBackPressedCallback onBackPressedCallback = new OnBackPressedCallback(false) {
+        @Override
+        public void handleOnBackPressed() {
+            hideModal();
+        }
+    };
 
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         isFromBookmark = getArguments().getBoolean("isFromBookmark");
@@ -96,6 +105,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, Permiss
         Mapbox.getInstance(this.requireContext(), getString(R.string.mapbox_access_token));
 
         View root = inflater.inflate(R.layout.fragment_map, container, false);
+
+        requireActivity().getOnBackPressedDispatcher().addCallback(this.getViewLifecycleOwner(), onBackPressedCallback);
 
         this.userLocation = root.findViewById(R.id.get_location);
 
@@ -124,7 +135,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, Permiss
         this.saveModal = view.findViewById(R.id.save_modal);
         this.locationGeocode = view.findViewById(R.id.location_geocode);
         this.locationName = view.findViewById(R.id.location_name);
-        Button saveLocation = view.findViewById(R.id.save_location);
+        saveLocation = view.findViewById(R.id.save_location);
         Button cancelSave = view.findViewById(R.id.cancel_save);
 
         this.saveModal.setVisibility(View.INVISIBLE);
@@ -148,20 +159,22 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, Permiss
         place.setName(name);
         place.setPriority(1);
 
-        MainActivity.threadPoolExecutor.execute(() -> {
-            AppDatabase database = AppDatabase.getInstance(getContext());
+        AppDatabase database = AppDatabase.getInstance(getContext());
 
-            disposable = Completable.fromAction(() -> database.getAppDao().insert(place))
-                    .subscribeOn(Schedulers.io())
-                    .observeOn(AndroidSchedulers.mainThread())
-                    .subscribe(() -> Toast.makeText(getContext(), "Location saved with name: " + place.getName(), Toast.LENGTH_LONG).show());
-        });
+        disposable = Completable.fromAction(() -> database.getAppDao().insert(place))
+                .subscribeOn(Schedulers.from(MainActivity.threadPoolExecutor))
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(() -> {
+                    Toast.makeText(getContext(), "Location saved with name: " + place.getName(), Toast.LENGTH_LONG).show();
+                    Utils.closeKeyboard(saveLocation, getContext());
+                });
     }
 
     private void hideModal() {
         this.deleteMarker();
         this.saveModal.setVisibility(View.INVISIBLE);
         this.userLocation.setVisibility(View.VISIBLE);
+        onBackPressedCallback.setEnabled(false);
     }
 
     private void initializeSearchBar(View view, LayoutInflater inflater) {
@@ -191,6 +204,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, Permiss
         this.saveModal.setVisibility(View.VISIBLE);
         this.locationName.requestFocus();
         this.userLocation.setVisibility(View.INVISIBLE);
+        onBackPressedCallback.setEnabled(true);
     }
 
     @Override

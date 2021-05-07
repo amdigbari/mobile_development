@@ -56,6 +56,7 @@ public class BookmarksFragment extends Fragment implements MaterialSearchBar.OnS
         this.mRecyclerView.setLayoutManager(mLayoutManager);
         this.mBookmarkAdapter = new BookmarksAdapter(places, position -> navigate(mBookmarkAdapter.getItem(position)), position -> removeFromDb(mBookmarkAdapter.getItem(position)));
 
+        this.mBookmarkAdapter = new BookmarksAdapter(places, position -> navigate(places.get(position)), position -> removeFromDb(mBookmarkAdapter.getItem(position)));
         this.mRecyclerView.setAdapter(this.mBookmarkAdapter);
 
 
@@ -84,29 +85,14 @@ public class BookmarksFragment extends Fragment implements MaterialSearchBar.OnS
         this.searchBar.setOnSearchActionListener(this);
     }
 
-    private void initializeSpeechRecognizer() {
-        if (ContextCompat.checkSelfPermission(this.getContext(), Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                ActivityCompat.requestPermissions(this.getActivity(), new String[]{Manifest.permission.RECORD_AUDIO}, RecordAudioRequestCode);
-            }
-        }
-    }
-
-    private void initializeSearchBar(View view) {
-        this.searchBar = view.findViewById(R.id.search_bookmarks);
-        this.searchBar.setHint("Search Address");
-        this.searchBar.setSpeechMode(true);
-        this.searchBar.setOnSearchActionListener(this);
-    }
-
     private void readPlacesFromDb() {
-        MainActivity.threadPoolExecutor.execute(() -> disposable = Single.fromCallable(() -> AppDatabase.getInstance(getContext()).getAppDao().getAllPlaces())
-                .subscribeOn(Schedulers.io())
+        disposable = Single.fromCallable(() -> AppDatabase.getInstance(getContext()).getAppDao().getAllPlaces())
+                .subscribeOn(Schedulers.from(MainActivity.threadPoolExecutor))
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe((dbPlaces, throwable) -> {
                     databasePlaces.addAll(dbPlaces);
                     resetPlaces();
-                }));
+                });
     }
 
     private void resetPlaces() {
@@ -116,18 +102,16 @@ public class BookmarksFragment extends Fragment implements MaterialSearchBar.OnS
     }
 
     private void removeFromDb(Place place) {
-        MainActivity.threadPoolExecutor.execute(() -> {
-            AppDatabase database = AppDatabase.getInstance(getContext());
-            disposable = Completable.fromAction(() -> database.getAppDao().delete(place))
-                    .subscribeOn(Schedulers.io())
-                    .observeOn(AndroidSchedulers.mainThread())
-                    .subscribe(() -> {
-                        databasePlaces.remove(place);
-                        places.remove(place);
-                        mBookmarkAdapter.notifyDataSetChanged();
-                        Toast.makeText(getContext(), R.string.place_removed, Toast.LENGTH_LONG).show();
-                    });
-        });
+        AppDatabase database = AppDatabase.getInstance(getContext());
+        disposable = Completable.fromAction(() -> database.getAppDao().delete(place))
+                .subscribeOn(Schedulers.from(MainActivity.threadPoolExecutor))
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(() -> {
+                    databasePlaces.remove(place);
+                    places.remove(place);
+                    mBookmarkAdapter.notifyDataSetChanged();
+                    Toast.makeText(getContext(), R.string.place_removed, Toast.LENGTH_LONG).show();
+                });
     }
 
     private void searchPlaces(String text) {

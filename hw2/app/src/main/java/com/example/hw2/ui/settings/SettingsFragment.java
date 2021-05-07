@@ -7,18 +7,29 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.Switch;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.fragment.app.Fragment;
 
+import com.example.hw2.MainActivity;
 import com.example.hw2.R;
+import com.example.hw2.repository.db.AppDatabase;
+
+import io.reactivex.Completable;
+import io.reactivex.Single;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.schedulers.Schedulers;
 
 
 @SuppressLint("UseSwitchCompatOrMaterialCode")
 public class SettingsFragment extends Fragment {
 
+    Disposable disposable;
     @SuppressLint("SetTextI18n")
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -31,6 +42,14 @@ public class SettingsFragment extends Fragment {
         final boolean isDarkModeOn = sharedPreferences.getBoolean("isDarkModeOn", false);
 
         switchDark.setChecked(isDarkModeOn);
+
+        Button btnDeleteDataButton = root.findViewById(R.id.data_button);
+        btnDeleteDataButton.setOnClickListener(v -> {
+            disposable = Completable.fromAction(() -> AppDatabase.getInstance(getContext()).getAppDao().deleteAllPlaces())
+                    .subscribeOn(Schedulers.from(MainActivity.threadPoolExecutor))
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe(() -> Toast.makeText(getContext(), "Cleared", Toast.LENGTH_SHORT).show());
+        });
 
         switchDark.setOnClickListener(
                 view -> {
@@ -49,5 +68,13 @@ public class SettingsFragment extends Fragment {
                     editor.apply();
                 });
         return root;
+    }
+
+    @Override
+    public void onDestroy() {
+        if (disposable != null) {
+            disposable.dispose();
+        }
+        super.onDestroy();
     }
 }
